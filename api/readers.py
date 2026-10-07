@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from pantheon import config
+from pantheon import cerberus, config
 
 CHANGE = "grant alice to bob (read on alice-brain)"
 
@@ -24,5 +24,6 @@ def evals_payload() -> dict:
     }
 
 
-def grants() -> list[dict]:
-    return list(config.load_state().get("grants", []))
+async def grants() -> list[dict]:
+    """Live shares from Cognee, through Cerberus. The state file no longer caches them."""
+    return await cerberus.grants()

@@ -12,6 +12,11 @@ def test_evals_payload_tolerates_missing_files(tmp_path, monkeypatch):
     assert p["change"].startswith("grant alice to bob")
 
 
-def test_grants_reads_state(tmp_path, monkeypatch):
-    monkeypatch.setattr(readers.config, "load_state", lambda: {"datasets": {}, "grants": [{"owner": "alice", "grantee": "bob", "dataset": "alice-brain", "permission": "read"}]})
-    assert readers.grants()[0]["grantee"] == "bob"
+def test_grants_come_from_cognee_via_cerberus(monkeypatch):
+    import asyncio
+
+    async def fake_grants():
+        return [{"owner": "alice", "grantee": "bob", "dataset": "alice-brain", "permission": "read"}]
+
+    monkeypatch.setattr(readers.cerberus, "grants", fake_grants)
+    assert asyncio.run(readers.grants())[0]["grantee"] == "bob"

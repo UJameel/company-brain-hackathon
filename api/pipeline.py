@@ -96,8 +96,9 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
     feed: list[str] = []
 
     plan = await asyncio.to_thread(hermes.route, question, usage)
-    feed.append(f"Hermes routed: {plan['intent']} via {llm.ROUTES['route']}")
-    yield "hermes", {"intent": plan.get("intent"), "action_tool": plan.get("action_tool"), "model": llm.ROUTES["route"]}
+    route_model = "/".join(llm.model_for("route"))  # provider/model, e.g. ollama/llama3.1:8b or respan/gpt-4o-mini
+    feed.append(f"Hermes routed: {plan['intent']} via {route_model}")
+    yield "hermes", {"intent": plan.get("intent"), "action_tool": plan.get("action_tool"), "model": route_model}
 
     scope = await hermes._scope(user_key)
     feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
@@ -106,7 +107,8 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
     q = question + ACTION_SUFFIX if plan.get("intent") == "action" else question
     passages = await athena.recall(user_key, q, scope.get("readable_ids") or [])
     sources = athena.sources_in(passages)
-    yield "athena.recall", {"passages": len(passages), "sources": sources, "model": llm.ROUTES["synthesize"]}
+    synth_model = "/".join(llm.model_for("synthesize"))
+    yield "athena.recall", {"passages": len(passages), "sources": sources, "model": synth_model}
 
     prompt = build_prompt(user_key, q, scope, passages)
     answer = ""
@@ -118,7 +120,7 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
         answer = await asyncio.to_thread(llm.complete, "synthesize", athena.SYSTEM, prompt, usage)
         yield "athena.token", {"text": answer}
     answer = answer.strip()
-    feed.append(f"Athena: {len(passages)} passages from {sources} via {llm.ROUTES['synthesize']}")
+    feed.append(f"Athena: {len(passages)} passages from {sources} via {synth_model}")
 
     action = None
     if plan.get("intent") == "action":

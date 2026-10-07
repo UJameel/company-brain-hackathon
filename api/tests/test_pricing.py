@@ -9,6 +9,12 @@ def test_cost_sums_known_models():
     assert cost_usd(calls) == 15.15
 
 
+def test_local_ollama_steps_cost_nothing():
+    calls = [{"step": "route", "model": "llama3.1:8b", "provider": "ollama", "prompt_tokens": 5000, "completion_tokens": 50},
+             {"step": "route", "model": "gpt-4o-mini", "provider": "respan", "fallback": True, "prompt_tokens": 1_000_000, "completion_tokens": 0}]
+    assert cost_usd(calls) == 0.15
+
+
 def test_cost_ignores_unknown_model_and_none_tokens():
     calls = [
         {"step": "x", "model": "mystery", "prompt_tokens": 500, "completion_tokens": 500},

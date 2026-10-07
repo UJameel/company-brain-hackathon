@@ -18,7 +18,10 @@ def client(monkeypatch):
 
     monkeypatch.setattr(server.pipeline, "run", fake_run)
     monkeypatch.setattr(server.readers, "evals_payload", lambda: {"before": None, "after": {"mean": 1.0}, "isolation": None, "change": "grant alice to bob"})
-    monkeypatch.setattr(server.readers, "grants", lambda: [])
+    async def no_grants():
+        return []
+
+    monkeypatch.setattr(server.readers, "grants", no_grants)
     return TestClient(server.app)
 
 

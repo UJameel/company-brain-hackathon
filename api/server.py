@@ -93,12 +93,12 @@ async def ask(body: AskBody) -> dict:
 
 @app.post("/grant", dependencies=[Depends(demo_key)])
 async def grant(body: GrantBody) -> dict:
-    return {"message": await cerberus.grant(body.owner, body.to), "grants": readers.grants()}
+    return {"message": await cerberus.grant(body.owner, body.to), "grants": await readers.grants()}
 
 
 @app.post("/revoke", dependencies=[Depends(demo_key)])
 async def revoke(body: GrantBody) -> dict:
-    return {"message": await cerberus.revoke(body.owner, body.to), "grants": readers.grants()}
+    return {"message": await cerberus.revoke(body.owner, body.to), "grants": await readers.grants()}
 
 
 @app.post("/action/execute", dependencies=[Depends(demo_key)])
@@ -145,8 +145,8 @@ def scenarios() -> list[dict]:
 
 
 @app.get("/health")
-def health() -> dict:
-    return {"ok": True, "mode": "live", "users": list(config.USERS), "grants": readers.grants()}
+async def health() -> dict:
+    return {"ok": True, "mode": "live", "users": list(config.USERS), "grants": await readers.grants()}
 
 
 @app.post("/reset", dependencies=[Depends(demo_key)])
