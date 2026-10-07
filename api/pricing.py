@@ -12,7 +12,7 @@ PRICES: dict[str, tuple[float, float]] = {
 def cost_usd(calls: list[dict]) -> float:
     total = 0.0
     for c in calls:
-        if c.get("provider") == "ollama":  # local model: no gateway spend
+        if str(c.get("provider") or "").startswith("ollama"):  # local models (ollama, ollama-decision): no gateway spend
             continue
         price = PRICES.get(c.get("model") or "")
         if not price:

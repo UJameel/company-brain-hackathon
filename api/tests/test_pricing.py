@@ -11,6 +11,8 @@ def test_cost_sums_known_models():
 
 def test_local_ollama_steps_cost_nothing():
     calls = [{"step": "route", "model": "llama3.1:8b", "provider": "ollama", "prompt_tokens": 5000, "completion_tokens": 50},
+             # a priced slug served locally still costs nothing: the provider decides, not the model name
+             {"step": "judge", "model": "claude-haiku-4-5", "provider": "ollama-decision", "prompt_tokens": 1_000_000, "completion_tokens": 0},
              {"step": "route", "model": "gpt-4o-mini", "provider": "respan", "fallback": True, "prompt_tokens": 1_000_000, "completion_tokens": 0}]
     assert cost_usd(calls) == 0.15
 
