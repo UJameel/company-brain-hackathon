@@ -82,7 +82,8 @@ def test_action_intent_emits_hephaestus(fake_backend):
     assert done["action"]["status"] == "dry-run" and done["action"]["as_user"] == "alice@northwind.dev"
     assert done["themis"] is None
     assert done["suggested_actions"] == []  # alice has nothing hidden, the stub proposes nothing
-    assert done["feed"][-1].startswith("Hephaestus: slack_send_message dry-run as alice@northwind.dev")
+    # the acting identity comes from config.USERS, which .env may override
+    assert done["feed"][-1] == f"Hephaestus: slack_send_message dry-run as {pipeline.config.USERS['alice']}"
 
 
 def test_stream_failure_falls_back_to_single_completion(fake_backend, monkeypatch):
@@ -96,6 +97,23 @@ def test_stream_failure_falls_back_to_single_completion(fake_backend, monkeypatc
     done = events[-1][1]
     assert done["answer"] == "The Pro plan costs $49."
     assert events[-1][0] == "done"
+
+
+def test_granted_is_derived_from_scope_not_state_file(fake_backend, monkeypatch):
+    """Cognee is the source of truth for sharing: when Bob can read a dataset he does not own,
+    Themis scores against the after-grant expectations even if the state file says nothing."""
+    async def shared_scope(user_key):
+        return {"user": user_key, "identifier": "bob@northwind.dev", "readable": ["alice-brain", "bob-brain"],
+                "readable_ids": ["1", "2"], "hidden": {}}
+
+    monkeypatch.setattr(pipeline.hermes, "_scope", shared_scope)
+    monkeypatch.setattr(pipeline, "SCENARIOS", [
+        {"id": "pro-price-bob", "as_user": "bob", "question": "What will the Pro plan cost after the Atlas launch?",
+         "must_mention": ["$59"], "must_not_mention": ["$49"],
+         "after_grant": {"must_mention": ["$49"], "must_not_mention": ["$1000"]}},
+    ])
+    done = asyncio.run(collect())[-1][1]
+    assert done["themis"]["fact_score"] == 1.0  # after_grant expectations applied: $49 present, $1000 absent
 
 
 def test_build_prompt_mirrors_athena():

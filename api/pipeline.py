@@ -26,7 +26,15 @@ except Exception:  # scenarios file absent (tests, stripped images)
 
 
 def granted_to(user_key: str) -> bool:
+    """Fallback when no scope is at hand: the grants list in the state file."""
     return any(g.get("grantee") == user_key for g in config.load_state().get("grants", []))
+
+
+def granted_in_scope(user_key: str, scope: dict) -> bool:
+    """Cognee is the source of truth: a user is 'granted' when they can read a dataset
+    they do not own. The state file can lag behind a grant or revoke."""
+    own = config.dataset_for(user_key)
+    return any(name != own for name in scope.get("readable") or [])
 
 
 def build_prompt(user_key: str, question: str, scope: dict, passages: list[str]) -> str:
@@ -132,7 +140,7 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
         "hidden": list((scope.get("hidden") or {}).keys()), "action": action, "suggested_actions": suggested,
         "usage": usage.calls, "feed": feed, "latency_s": round(time.time() - t0, 2),
     }
-    scenario = match(user_key, question, granted_to(user_key), SCENARIOS)
+    scenario = match(user_key, question, granted_in_scope(user_key, scope), SCENARIOS)
     result["themis"] = None
     if scenario:
         fc = themis.fact_check(scenario, result)

@@ -84,7 +84,8 @@ async def chat(body: AskBody) -> StreamingResponse:
 async def ask(body: AskBody) -> dict:
     async with _locks[body.user]:
         result = await hermes.ask(body.user, body.question, dry_run=body.dry_run)
-    scenario = pipeline.match(body.user, body.question, pipeline.granted_to(body.user), pipeline.SCENARIOS)
+        granted = pipeline.granted_in_scope(body.user, await cerberus.scope(body.user))
+    scenario = pipeline.match(body.user, body.question, granted, pipeline.SCENARIOS)
     result["themis"] = {"scenario_id": scenario["id"], **pipeline.themis.fact_check(scenario, result)} if scenario else None
     result["cost_usd"] = pipeline.cost_usd(result["usage"])
     return result
