@@ -829,8 +829,15 @@ async def scope(user: User) -> dict:
 
 
 @app.get("/actions")
-def actions(user: User | None = None) -> list[dict]:
-    return hephaestus.pending(user)
+def actions(user: User | None = None, history: bool = False) -> list[dict]:
+    """Pending proposals by default; with history=true, the latest state of every proposal
+    (approved, declined, revised too) so the UI can show what the person decided."""
+    if not history:
+        return hephaestus.pending(user)
+    latest: dict[str, dict] = {}
+    for e in hephaestus._all():
+        latest[e["id"]] = e
+    return [e for e in latest.values() if user is None or e["user"] == user]
 
 
 @app.post("/actions/{action_id}/decide", dependencies=[Depends(demo_key)])
