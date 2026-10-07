@@ -14,8 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from pantheon import cerberus, config, hephaestus, hermes
+from pantheon import cerberus, config, hephaestus, hermes, mnemosyne
 
+from . import connections as conns
+from . import graph as graphmod
 from . import pipeline, readers
 
 DEMO_KEY = os.environ.get("DEMO_KEY", "")
@@ -55,6 +57,14 @@ class DecideBody(BaseModel):
     decision: Literal["approve", "decline", "revise"]
     note: str | None = None
     execute: bool = False
+
+
+class SyncBody(BaseModel):
+    user: User
+    channels: list[str] = []
+    github_repo: str | None = None
+    notion_query: str | None = None
+    all_sources: bool = True
 
 
 def demo_key(x_demo_key: str = Header(default="")) -> None:
@@ -132,6 +142,23 @@ async def decide(action_id: str, body: DecideBody) -> dict:
     if "error" in out:
         raise HTTPException(404 if out["error"].startswith("no action") else 409, out["error"])
     return out
+
+
+@app.get("/graph")
+async def graph(user: User, max_nodes: int = 600) -> dict:
+    async with _locks[user]:
+        return await graphmod.graph_for(user, max_nodes)
+
+
+@app.get("/connections")
+def connections(user: User) -> list[dict]:
+    return conns.connections_for(user)
+
+
+@app.post("/sync", dependencies=[Depends(demo_key)])
+async def sync(body: SyncBody) -> dict:
+    async with _locks[body.user]:
+        return await mnemosyne.ingest(body.user, True, body.channels, body.github_repo, body.notion_query, all_sources=body.all_sources)
 
 
 @app.get("/evals")
