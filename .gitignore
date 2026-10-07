@@ -12,3 +12,5 @@ cognee-feedback.md
 .pytest_cache/
 .DS_Store
 .cognee-feedback.state
+.tools-cache.json
+*.live.json

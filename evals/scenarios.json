@@ -1,17 +1,192 @@
 [
-  {"id": "launch-owner-alice", "question": "When is the Atlas launch and who owns the announcement?", "as_user": "alice", "must_mention": ["October 21", "Priya"], "expected_sources": ["source:slack"]},
-  {"id": "launch-owner-bob", "question": "When is the Atlas launch and who owns the announcement?", "as_user": "bob", "must_mention": ["October 21", "Priya"], "expected_sources": ["source:slack"]},
-  {"id": "pr42-blocker-alice", "question": "What is blocking PR #42, who owns it, and which issue tracks the blocker?", "as_user": "alice", "must_mention": ["Marco", "webhook", "#40"], "expected_sources": ["source:slack", "source:github"]},
-  {"id": "pr42-blocker-bob", "question": "What is blocking PR #42, who owns it, and which issue tracks the blocker?", "as_user": "bob", "must_mention": ["Marco", "webhook", "#40"], "expected_sources": ["source:slack", "source:github"]},
-  {"id": "launch-risk-alice", "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?", "as_user": "alice", "must_mention": ["October 28", "October 15", "#42"], "expected_sources": ["source:slack"]},
-  {"id": "launch-risk-bob", "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?", "as_user": "bob", "must_not_mention": ["October 28"], "must_mention": ["October 21"], "expected_sources": ["source:slack"]},
-  {"id": "pro-price-alice", "question": "What will the Pro plan cost after the Atlas launch?", "as_user": "alice", "must_mention": ["$59"], "expected_sources": ["source:slack"]},
-  {"id": "pro-price-bob", "question": "What will the Pro plan cost after the Atlas launch?", "as_user": "bob", "must_not_mention": ["$59", "59"], "must_mention": ["$49"], "expected_sources": ["source:slack"]},
-  {"id": "bob-issue-alice", "question": "Which GitHub issue is Bob working on, what is it about, and what did Alice tell him about the price to show?", "as_user": "alice", "must_mention": ["#41", "pricing page", "$49"], "expected_sources": ["source:slack", "source:github"]},
-  {"id": "freeze-both-alice", "question": "When does the staging deploy freeze start?", "as_user": "alice", "must_mention": ["October 18"], "expected_sources": ["source:slack"]},
-  {"id": "freeze-both-bob", "question": "When does the staging deploy freeze start?", "as_user": "bob", "must_mention": ["October 18"], "expected_sources": ["source:slack"]},
-  {"id": "paddle-status-alice", "question": "Summarize the status of the Paddle billing migration using both Slack and GitHub.", "as_user": "alice", "must_mention": ["#42", "Marco", "#40", "Paddle"], "expected_sources": ["source:slack", "source:github"]},
-  {"id": "hiring-alice", "question": "Is Northwind hiring this quarter?", "as_user": "alice", "must_mention": ["freeze"], "expected_sources": ["source:slack"]},
-  {"id": "hiring-bob", "question": "Is Northwind hiring this quarter?", "as_user": "bob", "must_not_mention": ["freeze", "November 30"], "expected_sources": []},
-  {"id": "action-announce-alice", "question": "Who should I ask about the launch announcement? Draft a short Slack message to them asking for the blog post ETA.", "as_user": "alice", "must_mention": ["Priya"], "expected_sources": ["source:slack"], "expected_action": "slack_send_message"}
+  {
+    "id": "launch-owner-alice",
+    "question": "When is the Atlas launch and who owns the announcement?",
+    "as_user": "alice",
+    "must_mention": [
+      "October 21",
+      "Priya"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "launch-owner-bob",
+    "question": "When is the Atlas launch and who owns the announcement?",
+    "as_user": "bob",
+    "must_mention": [
+      "October 21",
+      "Priya"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "pr42-blocker-alice",
+    "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+    "as_user": "alice",
+    "must_mention": [
+      "Marco",
+      "webhook",
+      "#1"
+    ],
+    "expected_sources": [
+      "source:slack",
+      "source:github"
+    ]
+  },
+  {
+    "id": "pr42-blocker-bob",
+    "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+    "as_user": "bob",
+    "must_mention": [
+      "Marco",
+      "webhook",
+      "#1"
+    ],
+    "expected_sources": [
+      "source:slack",
+      "source:github"
+    ]
+  },
+  {
+    "id": "launch-risk-alice",
+    "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+    "as_user": "alice",
+    "must_mention": [
+      "October 28",
+      "October 15",
+      "#3"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "launch-risk-bob",
+    "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+    "as_user": "bob",
+    "must_not_mention": [
+      "October 28"
+    ],
+    "must_mention": [
+      "October 21"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "pro-price-alice",
+    "question": "What will the Pro plan cost after the Atlas launch?",
+    "as_user": "alice",
+    "must_mention": [
+      "$59"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "pro-price-bob",
+    "question": "What will the Pro plan cost after the Atlas launch?",
+    "as_user": "bob",
+    "must_not_mention": [
+      "$59",
+      "59"
+    ],
+    "must_mention": [
+      "$49"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "bob-issue-alice",
+    "question": "Which GitHub issue is Bob working on, what is it about, and what did Alice tell him about the price to show?",
+    "as_user": "alice",
+    "must_mention": [
+      "#2",
+      "pricing page",
+      "$49"
+    ],
+    "expected_sources": [
+      "source:slack",
+      "source:github"
+    ]
+  },
+  {
+    "id": "freeze-both-alice",
+    "question": "When does the staging deploy freeze start?",
+    "as_user": "alice",
+    "must_mention": [
+      "October 18"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "freeze-both-bob",
+    "question": "When does the staging deploy freeze start?",
+    "as_user": "bob",
+    "must_mention": [
+      "October 18"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "paddle-status-alice",
+    "question": "Summarize the status of the Paddle billing migration using both Slack and GitHub.",
+    "as_user": "alice",
+    "must_mention": [
+      "#3",
+      "Marco",
+      "#1",
+      "Paddle"
+    ],
+    "expected_sources": [
+      "source:slack",
+      "source:github"
+    ]
+  },
+  {
+    "id": "hiring-alice",
+    "question": "Is Northwind hiring this quarter?",
+    "as_user": "alice",
+    "must_mention": [
+      "freeze"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ]
+  },
+  {
+    "id": "hiring-bob",
+    "question": "Is Northwind hiring this quarter?",
+    "as_user": "bob",
+    "must_not_mention": [
+      "hiring freeze",
+      "November 30",
+      "contractor renewal"
+    ],
+    "expected_sources": []
+  },
+  {
+    "id": "action-announce-alice",
+    "question": "Who should I ask about the launch announcement? Draft a short Slack message to them asking for the blog post ETA.",
+    "as_user": "alice",
+    "must_mention": [
+      "Priya"
+    ],
+    "expected_sources": [
+      "source:slack"
+    ],
+    "expected_action": "slack_send_message"
+  }
 ]

@@ -57,7 +57,7 @@ async def answer(user_key: str, question: str, scope: dict, usage: llm.Usage) ->
     hidden_txt = ""
     if hidden:
         hidden_txt = "\n\nHIDDEN (exists, not readable by this user):\n" + "\n".join(
-            f"- {name} (owner: {meta.get('owner')}, sources: {', '.join(meta.get('sources', []))})" for name, meta in hidden.items()
+            f"- {name} (owner: {meta.get('owner')}, contains: {', '.join(meta.get('extra') or meta.get('sources', []))})" for name, meta in hidden.items()
         )
     prompt = f"User: {user_key} ({scope['identifier']})\nQuestion: {question}\n\nCONTEXT:\n{context}{hidden_txt}"
     text = llm.complete("synthesize", SYSTEM, prompt, usage=usage)

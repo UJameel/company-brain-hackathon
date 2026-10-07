@@ -14,8 +14,10 @@ from . import config, llm, hermes
 
 JUDGE_SYSTEM = """You are an impartial evaluator. Given a question, the facts a correct answer must
 contain, facts it must NOT contain, and the candidate answer, reply with JSON only:
-{"score": <0.0-1.0>, "reason": "<one sentence>"}. Score 1.0 only if every required fact is
-present and no forbidden fact appears; penalise hallucinated specifics."""
+{"score": <0.0-1.0>, "reason": "<one sentence>"}. Score 1.0 if every required fact is present
+and no forbidden fact appears. Extra detail that is consistent with the required facts (a year on
+a date, a source citation, an added caveat) is fine and must not be penalised. Penalise only facts
+that contradict the required ones, invented specifics, or a forbidden fact appearing."""
 
 
 def fact_check(scenario: dict, result: dict) -> dict:

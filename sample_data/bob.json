@@ -8,13 +8,13 @@
       {"user": "alice", "ts": "2026-10-01T09:15", "text": "Thanks Priya. Engineering is targeting code freeze on October 18 for Atlas."},
       {"user": "sam", "ts": "2026-10-02T11:40", "text": "Office is closed on Monday October 13 for the holiday. Work from home if you need anything shipped."},
       {"user": "priya", "ts": "2026-10-03T16:05", "text": "All-hands is Friday at 10am PT. Agenda: Atlas launch readiness, Q4 roadmap."},
-      {"user": "bob", "ts": "2026-10-06T10:22", "text": "Pricing page redesign is in review, see issue #41 in the atlas repo."}
+      {"user": "bob", "ts": "2026-10-06T10:22", "text": "Pricing page redesign is in review, see issue #2 in the atlas repo."}
     ],
     "engineering": [
-      {"user": "marco", "ts": "2026-10-02T14:30", "text": "Opened PR #42: migrate billing from Stripe to Paddle. I own this one. Still testing webhook handling."},
+      {"user": "marco", "ts": "2026-10-02T14:30", "text": "Opened PR #3: migrate billing from Stripe to Paddle. I own this one. Still testing webhook handling."},
       {"user": "alice", "ts": "2026-10-03T09:02", "text": "Heads up: staging deploy freeze starts October 18 until Atlas ships."},
-      {"user": "marco", "ts": "2026-10-05T17:48", "text": "PR #42 is blocked. Paddle webhook retries are storming our endpoint, tracked in issue #40. Need a retry backoff before merge."},
-      {"user": "bob", "ts": "2026-10-06T10:25", "text": "Working on the pricing page update (issue #41). Should I show the new Pro price or keep $49 for now?"},
+      {"user": "marco", "ts": "2026-10-05T17:48", "text": "PR #3 is blocked. Paddle webhook retries are storming our endpoint, tracked in issue #1. Need a retry backoff before merge."},
+      {"user": "bob", "ts": "2026-10-06T10:25", "text": "Working on the pricing page update (issue #2). Should I show the new Pro price or keep $49 for now?"},
       {"user": "alice", "ts": "2026-10-06T10:31", "text": "Bob, keep $49 on the page for now. Leadership will confirm pricing closer to launch."}
     ]
   },

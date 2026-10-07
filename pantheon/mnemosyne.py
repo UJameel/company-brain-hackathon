@@ -38,46 +38,85 @@ def ensure_authorized(actions, connection_name: str, identifier: str) -> bool:
     return False
 
 
-def pull_live(user_key: str, channels: list[str], github_repo: str | None) -> dict:
-    """Pull Slack channels (and optionally a GitHub repo) as this user. Items the user's
-    token cannot see simply do not come back: that is the access boundary, enforced upstream."""
+def _rows(data):
+    """Scalekit wraps list responses as {"array": [...]}; tolerate a bare list too."""
+    if isinstance(data, dict):
+        return data.get("array") or data.get("results") or data.get("items") or data.get("data") or []
+    return data or []
+
+
+def pull_live(user_key: str, channels: list[str], github_repo: str | None, notion_query: str | None = None) -> dict:
+    """Pull Slack channels, a GitHub repo and Notion pages AS this user. Items the user's
+    tokens cannot see simply do not come back: that is the access boundary, enforced upstream.
+    A connection the user never authorized yields nothing from that source."""
     identifier = config.USERS[user_key]
     actions = _actions()
-    pulled: dict = {"user": user_key, "pulled_at": datetime.now(timezone.utc).isoformat(), "slack": {}, "github": None}
+    recorded = load_recorded(user_key) if (config.SAMPLE_DIR / f"{user_key}.json").exists() else {}
+    pulled: dict = {"user": user_key, "pulled_at": datetime.now(timezone.utc).isoformat(), "slack": {}, "github": None, "notion": None,
+                    "live": {"slack": False, "github": False, "notion": False}}
 
-    if ensure_authorized(actions, config.SLACK_CONNECTION, identifier):
+    # --- Slack ---
+    if channels and ensure_authorized(actions, config.SLACK_CONNECTION, identifier):
         for ch in channels:
             try:
-                res = actions.execute_tool(
-                    tool_name="slack_fetch_conversation_history",
-                    tool_input={"channel": ch, "limit": 200},
-                    connection_name=config.SLACK_CONNECTION,
-                    identifier=identifier,
-                )
+                res = actions.execute_tool(tool_name="slack_fetch_conversation_history", tool_input={"channel": ch, "limit": 200},
+                                           connection_name=config.SLACK_CONNECTION, identifier=identifier)
                 msgs = (res.data or {}).get("messages", [])
-                pulled["slack"][ch.lstrip("#")] = [
-                    {"user": m.get("user", "?"), "ts": m.get("ts", ""), "text": m.get("text", "")}
-                    for m in reversed(msgs) if m.get("text")
-                ]
-            except Exception as e:  # channel private to this user, or not a member
-                print(f"[mnemosyne] {identifier} cannot read {ch}: {str(e)[:120]}")
+                pulled["slack"][ch.lstrip("#")] = [{"user": m.get("user", "?"), "ts": m.get("ts", ""), "text": m.get("text", "")}
+                                                    for m in reversed(msgs) if m.get("text")]
+                pulled["live"]["slack"] = True
+            except Exception as e:
+                print(f"[mnemosyne] {identifier} cannot read {ch}: {str(e).splitlines()[0][:120]}")
+    if not pulled["slack"] and recorded.get("slack"):
+        pulled["slack"] = recorded["slack"]          # replay the recorded Northwind transcripts
+        print(f"[mnemosyne] slack: replaying recorded pull for {user_key}")
 
+    # --- GitHub ---
     if github_repo and ensure_authorized(actions, config.GITHUB_CONNECTION, identifier):
         owner, repo = github_repo.split("/")
         gh = {"repo": github_repo, "issues": [], "pulls": [], "files": {}}
         try:
-            issues = actions.execute_tool(tool_name="githubpat_issues_list", tool_input={"owner": owner, "repo": repo, "state": "all"},
-                                          connection_name=config.GITHUB_CONNECTION, identifier=identifier).data
-            for it in issues if isinstance(issues, list) else issues.get("items", issues.get("data", [])):
-                entry = {"number": it.get("number"), "title": it.get("title"), "state": it.get("state"),
-                         "assignee": (it.get("assignee") or {}).get("login"), "body": it.get("body") or "",
-                         "labels": [l.get("name") for l in it.get("labels", [])]}
-                (gh["pulls"] if it.get("pull_request") else gh["issues"]).append(entry)
+            for it in _rows(actions.execute_tool(tool_name="github_issues_list", tool_input={"owner": owner, "repo": repo, "state": "all"},
+                                                 connection_name=config.GITHUB_CONNECTION, identifier=identifier).data):
+                if it.get("pull_request"):
+                    continue
+                gh["issues"].append({"number": int(it.get("number")), "title": it.get("title"), "state": it.get("state"),
+                                     "assignee": (it.get("assignee") or {}).get("login"), "body": it.get("body") or "",
+                                     "labels": [l.get("name") for l in it.get("labels", [])]})
+            for pr in _rows(actions.execute_tool(tool_name="github_pull_requests_list", tool_input={"owner": owner, "repo": repo, "state": "all"},
+                                                 connection_name=config.GITHUB_CONNECTION, identifier=identifier).data):
+                gh["pulls"].append({"number": int(pr.get("number")), "title": pr.get("title"), "state": pr.get("state"),
+                                    "author": (pr.get("user") or {}).get("login"), "body": pr.get("body") or "",
+                                    "files_changed": []})
+            import base64
+            f = actions.execute_tool(tool_name="github_file_contents_get", tool_input={"owner": owner, "repo": repo, "path": "README.md"},
+                                     connection_name=config.GITHUB_CONNECTION, identifier=identifier).data
+            if isinstance(f, dict) and f.get("content"):
+                gh["files"]["README.md"] = base64.b64decode(f["content"]).decode("utf-8", "replace")
+            pulled["live"]["github"] = True
         except Exception as e:
-            print(f"[mnemosyne] github pull failed: {str(e)[:160]}")
+            print(f"[mnemosyne] github pull failed: {str(e).splitlines()[0][:160]}")
         pulled["github"] = gh
 
-    (config.SAMPLE_DIR / f"{user_key}.json").write_text(json.dumps(pulled, indent=2))
+    # --- Notion ---
+    if notion_query and ensure_authorized(actions, config.NOTION_CONNECTION, identifier):
+        pages = []
+        try:
+            res = actions.execute_tool(tool_name="notion_page_search", tool_input={"query": notion_query},
+                                       connection_name=config.NOTION_CONNECTION, identifier=identifier).data
+            for pg in _rows(res)[:5]:
+                pid = pg.get("id")
+                title = "".join(t.get("plain_text", "") for t in ((pg.get("properties") or {}).get("title") or {}).get("title", [])) or pg.get("title") or pid
+                md = actions.execute_tool(tool_name="notion_page_markdown_get", tool_input={"page_id": pid},
+                                          connection_name=config.NOTION_CONNECTION, identifier=identifier).data
+                text = md if isinstance(md, str) else (md.get("markdown") or md.get("content") or json.dumps(md))
+                pages.append({"id": pid, "title": title, "markdown": text})
+            pulled["live"]["notion"] = True
+        except Exception as e:
+            print(f"[mnemosyne] notion pull failed: {str(e).splitlines()[0][:160]}")
+        pulled["notion"] = {"pages": pages}
+
+    (config.SAMPLE_DIR / f"{user_key}.live.json").write_text(json.dumps(pulled, indent=2))
     return pulled
 
 
@@ -114,6 +153,9 @@ def documents(pulled: dict) -> list[tuple[str, list[str]]]:
         for path, content in (gh.get("files") or {}).items():
             tags = ["source:github", f"repo:{repo}", "kind:file", f"owner:{user_key}"]
             docs.append((f"[source:github repo:{repo} file:{path} pulled-as:{user_key}]\n{content}", tags))
+    for pg in ((pulled.get("notion") or {}).get("pages") or []):
+        tags = ["source:notion", f"page:{pg['title'][:40]}", f"owner:{user_key}"]
+        docs.append((f"[source:notion page:{pg['title']} pulled-as:{user_key}]\nNotion page: {pg['title']}\n{pg['markdown']}", tags))
     return docs
 
 
@@ -123,15 +165,17 @@ async def remember(user_key: str, pulled: dict) -> dict:
     dataset = config.dataset_for(user_key)
     docs = documents(pulled)
     sources: set[str] = set()
+    all_tags: set[str] = set()
     for text, tags in docs:
         await cognee.remember(text, dataset_name=dataset, user=user, node_set=tags)
         sources.update(t for t in tags if t.startswith("source:"))
+        all_tags.update(t for t in tags if not t.startswith("owner:"))
     state = config.load_state()
-    state.setdefault("datasets", {})[dataset] = {"owner": user_key, "sources": sorted(sources), "documents": len(docs)}
+    state.setdefault("datasets", {})[dataset] = {"owner": user_key, "sources": sorted(sources), "tags": sorted(all_tags), "documents": len(docs)}
     config.save_state(state)
     return {"dataset": dataset, "documents": len(docs), "sources": sorted(sources)}
 
 
-async def ingest(user_key: str, live: bool, channels: list[str], github_repo: str | None) -> dict:
-    pulled = pull_live(user_key, channels, github_repo) if live else load_recorded(user_key)
+async def ingest(user_key: str, live: bool, channels: list[str], github_repo: str | None, notion_query: str | None = None) -> dict:
+    pulled = pull_live(user_key, channels, github_repo, notion_query) if live else load_recorded(user_key)
     return await remember(user_key, pulled)

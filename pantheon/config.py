@@ -27,7 +27,8 @@ def dataset_for(user_key: str) -> str:
 
 
 SLACK_CONNECTION = os.environ.get("SLACK_CONNECTION_NAME", "slack")
-GITHUB_CONNECTION = os.environ.get("GITHUB_CONNECTION_NAME", "githubpat")
+GITHUB_CONNECTION = os.environ.get("GITHUB_CONNECTION_NAME", "github-connect")
+NOTION_CONNECTION = os.environ.get("NOTION_CONNECTION_NAME", "notion")
 
 SAMPLE_DIR = ROOT / "sample_data"
 EVALS_DIR = ROOT / "evals"

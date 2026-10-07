@@ -1,6 +1,6 @@
 {
   "user": "alice",
-  "role": "Engineering lead at Northwind Labs. Member of #general, #engineering and the private #leadership channel. Has GitHub access to northwind/atlas.",
+  "role": "Engineering lead at Northwind Labs. Member of #general, #engineering and the private #leadership channel. Has GitHub access to UJameel/northwind-atlas.",
   "pulled_at": "2026-10-07T14:00:00-07:00",
   "slack": {
     "general": [
@@ -8,33 +8,33 @@
       {"user": "alice", "ts": "2026-10-01T09:15", "text": "Thanks Priya. Engineering is targeting code freeze on October 18 for Atlas."},
       {"user": "sam", "ts": "2026-10-02T11:40", "text": "Office is closed on Monday October 13 for the holiday. Work from home if you need anything shipped."},
       {"user": "priya", "ts": "2026-10-03T16:05", "text": "All-hands is Friday at 10am PT. Agenda: Atlas launch readiness, Q4 roadmap."},
-      {"user": "bob", "ts": "2026-10-06T10:22", "text": "Pricing page redesign is in review, see issue #41 in the atlas repo."}
+      {"user": "bob", "ts": "2026-10-06T10:22", "text": "Pricing page redesign is in review, see issue #2 in the atlas repo."}
     ],
     "engineering": [
-      {"user": "marco", "ts": "2026-10-02T14:30", "text": "Opened PR #42: migrate billing from Stripe to Paddle. I own this one. Still testing webhook handling."},
+      {"user": "marco", "ts": "2026-10-02T14:30", "text": "Opened PR #3: migrate billing from Stripe to Paddle. I own this one. Still testing webhook handling."},
       {"user": "alice", "ts": "2026-10-03T09:02", "text": "Heads up: staging deploy freeze starts October 18 until Atlas ships."},
-      {"user": "marco", "ts": "2026-10-05T17:48", "text": "PR #42 is blocked. Paddle webhook retries are storming our endpoint, tracked in issue #40. Need a retry backoff before merge."},
-      {"user": "bob", "ts": "2026-10-06T10:25", "text": "Working on the pricing page update (issue #41). Should I show the new Pro price or keep $49 for now?"},
+      {"user": "marco", "ts": "2026-10-05T17:48", "text": "PR #3 is blocked. Paddle webhook retries are storming our endpoint, tracked in issue #1. Need a retry backoff before merge."},
+      {"user": "bob", "ts": "2026-10-06T10:25", "text": "Working on the pricing page update (issue #2). Should I show the new Pro price or keep $49 for now?"},
       {"user": "alice", "ts": "2026-10-06T10:31", "text": "Bob, keep $49 on the page for now. Leadership will confirm pricing closer to launch."}
     ],
     "leadership": [
-      {"user": "dana", "ts": "2026-10-04T08:10", "text": "If PR #42 is not merged by October 15, the Atlas launch slips from October 21 to October 28. Marco's Paddle migration is the critical path."},
+      {"user": "dana", "ts": "2026-10-04T08:10", "text": "If PR #3 is not merged by October 15, the Atlas launch slips from October 21 to October 28. Marco's Paddle migration is the critical path."},
       {"user": "dana", "ts": "2026-10-04T08:14", "text": "Pricing decision: Pro moves from $49 to $59 per month, effective on launch day. Do not announce before the launch post goes live."},
       {"user": "alice", "ts": "2026-10-04T08:20", "text": "Noted. I will keep #engineering on the public pricing until Priya's post is out."},
       {"user": "dana", "ts": "2026-10-05T12:00", "text": "Hiring freeze is in effect through the end of Q4. Contractor renewals, including Bob's which ends November 30, get decided after launch."}
     ]
   },
   "github": {
-    "repo": "northwind/atlas",
+    "repo": "UJameel/northwind-atlas",
     "issues": [
-      {"number": 40, "title": "Paddle webhook retry storm hammers /billing/webhook", "state": "open", "assignee": "marco", "labels": ["billing", "P0"], "body": "After the Paddle sandbox switch, failed webhooks retry every 2s with no backoff. We need exponential backoff and idempotency keys before PR #42 can merge."},
-      {"number": 41, "title": "Pricing page redesign for Atlas launch", "state": "open", "assignee": "bob", "labels": ["frontend"], "body": "New pricing page layout for the Atlas launch. Price values are placeholders pending a leadership decision."}
+      {"number": 1, "title": "Paddle webhook retry storm hammers /billing/webhook", "state": "open", "assignee": "marco", "labels": ["billing", "P0"], "body": "After the Paddle sandbox switch, failed webhooks retry every 2s with no backoff. We need exponential backoff and idempotency keys before PR #3 can merge."},
+      {"number": 2, "title": "Pricing page redesign for Atlas launch", "state": "open", "assignee": "bob", "labels": ["frontend"], "body": "New pricing page layout for the Atlas launch. Price values are placeholders pending a leadership decision."}
     ],
     "pulls": [
-      {"number": 42, "title": "Migrate billing from Stripe to Paddle", "state": "open", "author": "marco", "draft": false, "body": "Replaces Stripe checkout and webhooks with Paddle. Blocked on #40 (webhook retry storm). Target merge: before the October 18 code freeze.", "files_changed": ["billing/paddle_client.py", "billing/webhooks.py", "tests/test_paddle_webhooks.py"]}
+      {"number": 3, "title": "Migrate billing from Stripe to Paddle", "state": "open", "author": "marco", "draft": false, "body": "Replaces Stripe checkout and webhooks with Paddle. Blocked on #1 (webhook retry storm). Target merge: before the October 18 code freeze.", "files_changed": ["billing/paddle_client.py", "billing/webhooks.py", "tests/test_paddle_webhooks.py"]}
     ],
     "files": {
-      "README.md": "# Atlas\n\nAtlas is Northwind Labs' analytics product. Launch target: October 21, 2026.\n\nBilling: Stripe (migrating to Paddle, see PR #42).\nOwners: billing -> marco, pricing page -> bob, launch comms -> priya."
+      "README.md": "# Atlas\n\nAtlas is Northwind Labs' analytics product. Launch target: October 21, 2026.\n\nBilling: Stripe (migrating to Paddle, see PR #3).\nOwners: billing -> marco, pricing page -> bob, launch comms -> priya."
     }
   }
 }

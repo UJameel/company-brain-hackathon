@@ -14,7 +14,22 @@ from cognee.modules.users.methods import create_user, get_user_by_email
 from cognee.modules.users.permissions.methods import authorized_give_permission_on_datasets
 
 
+_db_ready = False
+
+
+async def _ensure_db() -> None:
+    # Cognee's user/permission tables are created lazily by the high-level API. Calling the
+    # user methods directly first (as the hackathon README does) hits "no such table: principals".
+    global _db_ready
+    if not _db_ready:
+        from cognee.infrastructure.databases.relational import create_db_and_tables
+
+        await create_db_and_tables()
+        _db_ready = True
+
+
 async def get_or_create_user(user_key: str):
+    await _ensure_db()
     email = config.USERS[user_key]
     return await get_user_by_email(email) or await create_user(email, config.COGNEE_PASSWORD)
 
@@ -31,7 +46,19 @@ async def scope(user_key: str) -> dict:
     state = config.load_state()
     known = state.get("datasets", {})  # dataset name -> {"owner": user_key, "sources": [...]}
     readable = await readable_datasets(user_key)
-    hidden = {name: meta for name, meta in known.items() if name not in readable}
+    # A dataset is worth flagging as hidden only if it holds something (a channel, a repo,
+    # a source) that none of the user's readable datasets hold. Alice is not told that
+    # Bob's subset of her own knowledge is "hidden" from her.
+    have: set[str] = set()
+    for name in readable:
+        have.update(known.get(name, {}).get("tags", []))
+    hidden = {}
+    for name, meta in known.items():
+        if name in readable:
+            continue
+        extra = sorted(set(meta.get("tags", [])) - have)
+        if extra:
+            hidden[name] = {**meta, "extra": extra}
     return {"user": user_key, "identifier": config.USERS[user_key], "readable": readable, "hidden": hidden}
 
 

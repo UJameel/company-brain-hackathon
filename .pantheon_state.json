@@ -1,0 +1,36 @@
+{
+  "datasets": {
+    "alice-brain": {
+      "owner": "alice",
+      "sources": [
+        "source:github",
+        "source:slack"
+      ],
+      "tags": [
+        "channel:engineering",
+        "channel:general",
+        "channel:leadership",
+        "kind:file",
+        "kind:issue",
+        "kind:pull_request",
+        "repo:UJameel/northwind-atlas",
+        "source:github",
+        "source:slack"
+      ],
+      "documents": 7
+    },
+    "bob-brain": {
+      "owner": "bob",
+      "sources": [
+        "source:slack"
+      ],
+      "tags": [
+        "channel:engineering",
+        "channel:general",
+        "source:slack"
+      ],
+      "documents": 2
+    }
+  },
+  "grants": []
+}
