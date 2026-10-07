@@ -92,19 +92,23 @@ function Brain3D({ mode, activeRegion, graph, className, onRegion }: BrainProps)
       const tAz = target.az + sleepAz + state.current.azOffset + (mode === "autoplay" ? state.current.pointer[0] * 6 : 0);
       const tEl = target.el + (mode === "autoplay" ? -state.current.pointer[1] * 6 : 0);
       if (reduce) { az = tAz; el2 = tEl; dist = target.dist; } else { [az, vAz] = spring(az, tAz, vAz, dt); [el2, vEl] = spring(el2, tEl, vEl, dt); [dist, vD] = spring(dist, target.dist, vD, dt); }
-      const [cx, cy, cz] = orbitToPosition(az, el2, dist); camera.position.set(cx, cy, cz); camera.lookAt(0, 0, 0);
+      // Narrow hosts (the app's side panel) pull the camera back so the whole brain stays in frame.
+      const fit = Math.max(1, 0.9 / camera.aspect);
+      const [cx, cy, cz] = orbitToPosition(az, el2, dist * fit); camera.position.set(cx, cy, cz); camera.lookAt(0, 0, 0);
       for (const r of REGIONS) { const g = r === region ? 1 : 0; glow[r] = reduce ? g : glow[r] + (g - glow[r]) * Math.min(1, dt * 6); }
       const all = region === "sleep";
       for (let i = 0; i < pts.length; i++) {
-        const r = regions[i]; const g = all ? glow.sleep * (0.6 + 0.4 * Math.sin(t * 1.3 + phase[i])) : (r !== "cortex" && r === region ? glow[r as RegionName] : 0);
+        // Resting: a faint, slow pulse across the whole brain. Lit region: full accent.
+        const r = regions[i]; const g = all ? 0.22 * glow.sleep * (0.5 + 0.5 * Math.sin(t * 0.9 + phase[i])) : (r !== "cortex" && r === region ? glow[r as RegionName] : 0);
         const wob = reduce ? 0 : Math.sin(t * 0.8 + phase[i]) * 0.004;
         positions[i * 3] = base[i * 3] + wob; positions[i * 3 + 1] = base[i * 3 + 1] + wob * 0.6; positions[i * 3 + 2] = base[i * 3 + 2];
-        const c = g > 0.02 ? ACCENT_HI.clone().lerp(ACCENT, 1 - g) : BONE;
-        colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b; sizes[i] = g > 0.02 ? 2.8 + 1.4 * g : 1.8;
+        // bone at rest, warming through the accent to the highlight as the glow rises
+        const c = g > 0.02 ? (g < 0.5 ? BONE.clone().lerp(ACCENT, g * 2) : ACCENT.clone().lerp(ACCENT_HI, (g - 0.5) * 2)) : BONE;
+        colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b; sizes[i] = g > 0.5 ? 2.8 + 1.4 * g : 1.8 + g;
       }
       edges.forEach(([a, b], k) => {
-        const lit = !all && (regions[a] === region || regions[b] === region) ? glow[region] : all ? glow.sleep * 0.35 : 0;
-        const c = lit > 0.02 ? ACCENT : BONE; const alpha = lit > 0.02 ? 0.4 * lit + 0.07 : 0.07;
+        const lit = !all && (regions[a] === region || regions[b] === region) ? glow[region] : all ? glow.sleep * 0.12 : 0;
+        const c = lit > 0.02 ? BONE.clone().lerp(ACCENT, Math.min(1, lit * 1.5)) : BONE; const alpha = lit > 0.02 ? 0.4 * lit + 0.07 : 0.07;
         for (const [n, idx] of [[0, a], [1, b]] as const) {
           ePos.set([positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]], k * 6 + n * 3);
           eCol.set([c.r * alpha, c.g * alpha, c.b * alpha], k * 6 + n * 3);

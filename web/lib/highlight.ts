@@ -1,5 +1,10 @@
 export type Part = { text: string; hit: boolean };
 
+/** Athena sometimes answers with markdown bold; the UI shows plain text and highlights facts itself. */
+export function stripBold(text: string): string {
+  return text.replace(/\*\*(.*?)\*\*/g, "$1");
+}
+
 export function highlight(text: string, terms: string[]): Part[] {
   const clean = terms.filter(Boolean).sort((a, b) => b.length - a.length);
   if (!clean.length || !text) return [{ text, hit: false }];

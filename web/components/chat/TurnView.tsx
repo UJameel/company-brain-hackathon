@@ -1,6 +1,6 @@
 "use client";
 import type { Turn } from "@/lib/chat";
-import { highlight } from "@/lib/highlight";
+import { highlight, stripBold } from "@/lib/highlight";
 import type { Proposal } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { ActionCard } from "./ActionCard";
@@ -11,7 +11,7 @@ import { UsageFooter } from "./UsageFooter";
 
 export function TurnView({ turn, onGranted }: { turn: Turn; onGranted: () => void }) {
   const terms = turn.steps.themis?.hits ?? [];
-  const parts = highlight(turn.answer, terms);
+  const parts = highlight(stripBold(turn.answer), terms);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   useEffect(() => { setProposals(turn.steps.proposals ?? []); }, [turn.steps.proposals]);
   const replaceProposal = (id: string) => (next: Proposal | null) => setProposals((ps) => ps.flatMap((p) => (p.id === id ? (next ? [next] : []) : [p])));

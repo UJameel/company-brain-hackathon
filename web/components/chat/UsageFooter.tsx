@@ -5,6 +5,7 @@ import { useState } from "react";
 export function UsageFooter({ result }: { result: Result }) {
   const [open, setOpen] = useState(false);
   const tokens = result.usage.reduce((n, u) => n + (u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0), 0);
+  if (!result.usage.length) return <div className="mt-3 border-t border-line pt-2 text-right font-mono text-[11px] text-muted">{result.latency_s.toFixed(1)} s</div>;
   return (
     <div className="mt-3 border-t border-line pt-2 font-mono text-[11px] text-muted">
       <button onClick={() => setOpen(!open)} className="flex w-full justify-between hover:text-fg-2">
