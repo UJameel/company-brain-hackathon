@@ -12,10 +12,10 @@ const GOD: Record<RegionName, string> = { thalamus: "Hermes", amygdala: "Cerberu
 export function Hero() {
   const [r, setR] = useState<RegionName>("thalamus");
   return (
-    <header className="grid min-h-[600px] items-center gap-8 py-12 pb-18 lg:grid-cols-[minmax(0,560px)_1fr]">
+    <header className="grid min-h-[600px] items-center gap-8 py-12 pb-18 lg:grid-cols-[minmax(0,660px)_1fr]">
       <div>
         <p className="insc">A company brain, run by gods</p>
-        <h1 className="mt-4 text-[clamp(44px,6vw,86px)]">The company brain that knows <em className="italic text-accent">who is asking.</em></h1>
+        <h1 className="mt-4 text-[clamp(40px,4.8vw,66px)]">The company brain that knows <em className="italic text-accent">who is asking.</em></h1>
         <p className="mt-6 max-w-[38ch] text-lg leading-snug text-fg-2">Connect anything your company runs on. Pantheon remembers it as you, and answers only what you may know.</p>
         <div className="mt-9 flex flex-wrap gap-3">
           <Link href="/app" className="btn btn-primary">Open the app</Link>
