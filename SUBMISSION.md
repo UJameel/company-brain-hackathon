@@ -8,12 +8,12 @@
 
 ## Company Brain Overview
 
-Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. It pulls Slack and GitHub *as each employee* through Scalekit, remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Bob what exists that he cannot see and who owns it; Alice grants access live; Bob's answer changes; the eval shows before and after.
+Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. Wherever the company lives, Pantheon pulls it: Mnemosyne discovers every system of record each employee has connected through Scalekit and pulls it *as that employee* (known adapters for Slack, GitHub, Notion, Gmail, Calendar; a generic read-only adapter for any of the other 400+ connectors), remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Bob what exists that he cannot see and who owns it; Alice grants access live; Bob's answer changes; the eval shows before and after.
 
 - Data sources connected through Scalekit (≥ 2 apps): Slack (`slack`), GitHub (`github-connect`), Notion (`notion`, live: the leadership launch-plan page)
 - Primary use case / team workflow: launch-readiness Q&A and triage for an engineering team, with write-back (open the follow-up issue)
 - Users in the demo and how their access differs: Alice = Slack (#general, #engineering, private #leadership) + GitHub; Bob = Slack public channels only, no GitHub connection
-- What makes it stand out: authorization is a named agent (Cerberus) and is enforced twice, at pull (Scalekit per-user tokens) and at recall (Cognee per-user datasets, by id); every step is a named brain region in the Respan trace; the eval re-scores stored answers so before/after are judged by the same judge
+- What makes it stand out: every connected system of record is a source (discovery per user, generic adapter for unknown connectors); agents propose actions the user approves, declines or revises, and decisions are remembered; authorization is a named agent (Cerberus) and is enforced twice, at pull (Scalekit per-user tokens) and at recall (Cognee per-user datasets, by id); every step is a named brain region in the Respan trace; the eval re-scores stored answers so before/after are judged by the same judge
 
 ## The Three Layers
 
@@ -22,9 +22,9 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 - Connections created (`connection_name` → app): `slack` → Slack (Scalekit-managed OAuth), `github-connect` → GitHub, `notion` → Notion
 - Tools called: `github_issues_list`, `github_pull_requests_list`, `github_file_contents_get`, `slack_fetch_conversation_history`, `slack_list_channels`, `notion_page_search`, `notion_page_markdown_get`; write-back `github_issue_create` (and `slack_send_message`, allow-listed)
 - How users are identified (`identifier` ↔ Cognee user): the Scalekit `identifier` is the Cognee user's email (`USER_ALICE`, `USER_BOB` in `.env`); Cerberus resolves both from one key
-- Write-back actions the agent takes: Hephaestus opened GitHub issue UJameel/northwind-atlas#5 as `usman@ask-luca.com` via `execute_tool(identifier=...)`; dry-run by default, `--execute` to act; destructive tools are not exposed
+- Write-back actions the agent takes: on request and by proposal (approve / decline / revise, `pantheon actions`, `pantheon decide`); Hephaestus opened GitHub issue UJameel/northwind-atlas#5 as `usman@ask-luca.com` via `execute_tool(identifier=...)`; dry-run by default, `--execute` to act; destructive tools are not exposed
 - Virtual MCP server: `pantheon-hephaestus` (config `cfg_146540509584687370`) exposes four tools; `python -m pantheon mcp --user alice` mints a per-user session token
-- Code entry point: `pantheon/mnemosyne.py` (pull + remember), `pantheon/hephaestus.py` (act), `pantheon/mcp.py`
+- Code entry point: `pantheon/sources.py` (systems-of-record registry, discovery, generic adapter), `pantheon/mnemosyne.py` (pull + remember), `pantheon/hephaestus.py` (act, propose, decide), `pantheon/mcp.py`
 
 ### Remember — Cognee
 
@@ -38,7 +38,7 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 
 ### Act + Evaluate — your agent(s) + Respan
 
-- Agents: Hermes (route + model per step), Cerberus (authorization), Mnemosyne (ingest), Athena (answer), Hephaestus (act), Themis (evaluate), Morpheus (improve)
+- Agents: Hermes (route + model per step), Cerberus (authorization), Mnemosyne (discover + ingest), Athena (answer), Hephaestus (act on request, propose follow-ups, execute on approval), Themis (evaluate), Morpheus (improve; remembers decisions)
 - LLM calls routed through the Respan gateway: all of them. Hermes routes `gpt-4o-mini` for routing, `claude-sonnet-4-5` for synthesis, `claude-haiku-4-5` for action drafts, `claude-haiku-4-5` (pinned) for the judge; Cognee's own extraction and embeddings also run through the gateway (`openai/gpt-4o-mini`, `openai/text-embedding-3-large`)
 - Tracing: `respan-ai` SDK, `Respan()` at startup, `@workflow("pantheon.ask")` + `@task` per agent step; gateway calls auto-logged with model, tokens, cost
 - Scenario file: `evals/scenarios.json`, 15 scenarios (9 as Alice, 6 as Bob) with `must_mention`, `must_not_mention`, `expected_sources`, `expected_action`, and `after_grant` overrides for Bob
@@ -146,7 +146,7 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 4. Access: Bob asks the same -> Slack-only answer + "alice-brain holds GitHub and #leadership you cannot read; ask alice". `grant`. Bob asks again -> grounded in GitHub, sees $59.
 5. Act: Alice: "open an issue asking Marco for backoff" -> Hephaestus opens it on GitHub under Alice's account via Scalekit.
 6. Eval: `compare before after` table; Respan logs with judge spans.
-7. Next: Notion as live third source, Morpheus nightly consolidation, Eris contradiction detection (ported from my personal brain).
+7. Next: Morpheus nightly consolidation, Eris contradiction detection across systems (ported from my personal brain), more adapters.
 ```
 
 ## Links

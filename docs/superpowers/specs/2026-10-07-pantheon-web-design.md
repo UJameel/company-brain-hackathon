@@ -1,7 +1,9 @@
-# Pantheon web: landing page, demo console, hosted API
+# Pantheon web: landing page, product app, hosted API
 
-Date: 2026-10-07. Status: draft for review. Visual reference: the approved mockup
+Date: 2026-10-07. Status: draft v2 for review. Visual reference: the approved mockup
 (https://claude.ai/artifact/7Qr4vWBTGXc21mWpMDhvFM), classical theme, burnt orange accent.
+Backend state this spec is written against: commit `2d1be31` (three sources: Slack, GitHub,
+Notion; grant and revoke; eval stages isolated and after-grant; demo script in `docs/DEMO.md`).
 
 ## 1. Purpose
 
@@ -11,309 +13,341 @@ existing `pantheon` package without changing it.
 - `/` is a landing page that explains what Pantheon is and why a company needs it. Its
   centrepiece is a 3D brain drawn as a knowledge graph that rotates to each region as the
   reader scrolls through the seven agents.
-- `/demo` is the console used in the three-minute live demo and by judges afterwards. It
-  shows the access story on screen: two users, one question, the hidden datasets, a live
-  grant, the changed answer, the agent feed, per-step model and cost, and the before and
-  after eval scores.
-- `api/` is a FastAPI service that wraps `hermes.ask` and `cerberus.grant`, runs Themis's
-  deterministic fact check on live traffic, and ships in a Docker image together with the
-  ingested Cognee state.
+- `/app` is the product: a chat with the brain that streams each agent's step as it
+  happens and lights the matching region, a view of the user's real Cognee knowledge
+  graph, a way to add knowledge, agent-written insights, actions the user approves, and a
+  Connections page where each person links their own Slack, GitHub and Notion through
+  Scalekit. The three-minute demo runs inside it.
+- `api/` is a FastAPI service that wraps the pantheon package, streams the pipeline step
+  by step, serves the graph, and ships in a Docker image with the ingested Cognee state.
 
-Rubric coverage the web surfaces are responsible for: Demo (5), the "visible on screen"
-half of Secure access story (20), the live-traffic bonus in Evaluation (20), and the
-first impression that decides Company Brain quality (30).
+Rubric coverage the web surfaces own: Demo (5), the "visible on screen" half of Secure
+access story (20), the live-traffic bonus in Evaluation (20), the "connected graph in the
+explorer" line of Memory design (15), and the first impression behind Company Brain quality
+(30).
 
-## 2. Constraints
+## 2. Tiers and the cut line
+
+The product vision is larger than the hours left. Work lands in this order and the demo
+uses whatever tier is complete; everything below the line ships after the hackathon.
+
+| Tier | Scope | Demo beat it serves |
+|---|---|---|
+| 1 | Chat with step streaming and brain lighting, user switch, compare mode, hidden card with Grant and Revoke, action card with Execute, Themis badge, eval strip | Brain, Access, Act, Eval |
+| 2 | Graph view of the real Cognee graph per user, Connections page (Scalekit status, connect links, sync) | Pull, Memory design |
+| 3 | Add knowledge (notes), Insights (agents explore on demand) | product story |
+
+Landing page and the Fly and Vercel deployment are built alongside tier 1.
+
+## 3. Constraints
 
 - Nothing inside `pantheon/`, `evals/`, `sample_data/`, `tests/` or `.env` changes. The
-  backend session owns those.
-- The web app never runs ingest or eval. It only calls ask, grant, and reads results files.
-- Only one process may open a given user's Cognee graph at a time (Ladybug file lock). The
-  API is a single uvicorn worker and serialises asks per user with an asyncio lock.
-- No secrets in the repo. Fly secrets come from `.env` via `fly secrets import`.
-- Zero em-dashes in visible copy. One accent colour. Reduced motion respected everywhere.
+  backend session owns those. The API composes the package's public functions.
+- Only one process may open a user's Cognee graph at a time (Ladybug file lock). The API
+  runs one uvicorn worker and serialises work per user with an asyncio lock. Sync (ingest)
+  for a user blocks that user's chat until it finishes and says so in the UI.
+- No secrets in the repo. Fly secrets are imported from `.env`.
+- Zero em-dashes in visible copy. One accent colour. Reduced motion respected.
 
-## 3. Architecture
+## 4. Architecture
 
 ```text
 Vercel  web/  (Next.js 15, App Router, TypeScript, Tailwind v4)
    /        landing            -> recorded run (static JSON) for the hero replay
-   /demo    console            -> NEXT_PUBLIC_PANTHEON_API, falls back to recorded run
+   /app     product            -> NEXT_PUBLIC_PANTHEON_API, SSE for chat
+   /app/graph /app/connections /app/insights /app/evals   (same shell)
                                      |
                                      v  HTTPS, CORS allow-list
 Fly.io  api/  (FastAPI, 1 machine, 1 GB, min_machines_running = 1, no volume)
-   POST /ask  POST /grant  POST /reset  GET /evals  GET /scenarios  GET /health
-   imports pantheon.hermes, pantheon.cerberus, pantheon.themis.fact_check
-   state: /app/state (live copy)  <- /app/state-pristine (baked at build)
+   composes pantheon.hermes/cerberus/athena/hephaestus/mnemosyne/themis + cognee visualize
+   state: /app/state (live)  <- /app/state-pristine (baked at build)
 ```
 
-Repo layout added by this work:
+Repo layout added: `api/` (server, pipeline, pricing, tests), `web/` (Next.js), root
+`Dockerfile`, `fly.toml`, `.dockerignore`. `.playwright-mcp/` must be gitignored; it was
+committed by mistake in `81e0d7c`.
 
-```text
-api/            server.py, pricing.py, tests/
-web/            Next.js app
-docs/superpowers/specs/   this file
-Dockerfile  fly.toml  .dockerignore   repo root
-```
+## 5. API
 
-## 4. API
+Python 3.12, FastAPI, uvicorn, one worker.
 
-Python 3.12, FastAPI (already in the venv), uvicorn, one worker. `api/server.py` is under
-150 lines.
+### 5.1 Routes
 
-### 4.1 Routes
-
-| Route | Body | Returns |
+| Route | Body or query | Returns |
 |---|---|---|
-| `POST /ask` | `{user: "alice"\|"bob", question: str, dry_run: bool = true}` | the `hermes.ask` dict plus `themis` (see 4.2) and `cost_usd` |
-| `POST /grant` | `{owner: "alice", to: "bob"}` | `{message: str, state: {grants: [...]}}` |
-| `POST /reset` | none | `{ok: true}` then the process exits with code 0 and Fly restarts it |
-| `GET /evals` | none | `{before: results\|null, after: results\|null}` parsed from `evals/results-before.json` and `results-after.json` |
-| `GET /scenarios` | none | the contents of `evals/scenarios.json` |
-| `GET /health` | none | `{ok: true, mode: "live", users: ["alice","bob"]}` |
+| `POST /chat` | `{user, question, dry_run=true}` | SSE stream of events (5.2); last event is the full `hermes.ask`-shaped result plus `themis`, `cost_usd` |
+| `POST /ask` | same | the same result in one JSON response, for compare mode and tests |
+| `POST /grant` `POST /revoke` | `{owner, to}` | `{message, grants}` |
+| `POST /action/execute` | `{user, tool, input}` | `hephaestus.act(..., dry_run=False)` result |
+| `GET /scope?user=` | | `cerberus.scope`: readable, readable_ids, hidden with owner and extra tags |
+| `GET /graph?user=&max_nodes=600` | | `{nodes:[{id,label,type,node_set,dataset}], edges:[{source,target,label}]}` from Cognee's `fetch_visualization_data` over the user's readable datasets |
+| `GET /connections?user=` | | per connection (slack, github-connect, notion): status, and an authorization link when not ACTIVE, via Scalekit `get_or_create_connected_account` and `get_authorization_link` |
+| `POST /sync` | `{user, channels, github_repo, notion_query}` | runs `mnemosyne.ingest(user, live=True, ...)`; SSE progress; falls back to recorded when a source is not authorized, and says which |
+| `POST /notes` | `{user, text}` | `cognee.remember(text, dataset_name=<user>-brain, user, node_set=["source:note","owner:<user>"])`; updates state tags |
+| `POST /insights` | `{user}` | runs three fixed questions through the pipeline (what is at risk, what is blocked, what changed this week) and returns cards with answer, sources, hidden |
+| `GET /evals` | | `{before: results-before-coverage, after: results-after, isolation: results-before}` parsed |
+| `GET /scenarios` | | scenarios.json |
+| `POST /reset` | | restores pristine state and exits; Fly restarts |
+| `GET /health` | | `{ok, mode, users, grants}` |
 
-### 4.2 Themis on live traffic
+Writes (`grant`, `revoke`, `action/execute`, `sync`, `notes`, `reset`) require header
+`X-Demo-Key` equal to env `DEMO_KEY`. It is a speed bump, not auth; the spec says so.
 
-If the question matches a scenario in `scenarios.json` for the same user (exact string
-match after trim and case fold), the server runs `themis.fact_check(scenario, result)` and
-attaches `themis: {scenario_id, fact_score, hits, missing, leaks, grounded, ungrounded}`.
-No LLM judge on live traffic; the fact check costs nothing and is independent of Athena.
-When no scenario matches, `themis` is `null`.
+### 5.2 Streaming pipeline (`api/pipeline.py`)
 
-### 4.3 Cost estimate
+`hermes.ask` returns everything at the end, so the API composes the same steps itself and
+emits an event after each one. It uses the package's functions, not copies, except for the
+Athena prompt assembly (eight lines, mirrored so the synthesize step can stream tokens).
+The run is wrapped in a Respan `@workflow(name="pantheon.chat")` with the same task names
+as `hermes.ask`, so traces look identical.
 
-`api/pricing.py` holds a dict of USD per million tokens by model slug. The server sums
-`usage` rows into `cost_usd`. Values are estimates and the UI labels them as such.
+Events, in order, as `event: <name>` with a JSON `data` line:
 
-| model | input | output |
-|---|---|---|
-| gpt-4o-mini | 0.15 | 0.60 |
-| claude-sonnet-4-5 | 3.00 | 15.00 |
-| claude-haiku-4-5 | 1.00 | 5.00 |
+1. `hermes` `{intent, action_tool, model}` after `hermes.route`
+2. `cerberus` `{readable, hidden}` after `cerberus.scope`
+3. `athena.recall` `{passages, sources}` after `athena.recall`
+4. `athena.token` `{text}` repeatedly while `llm.client()` streams the synthesize call
+   (model from `llm.ROUTES["synthesize"]`, same system prompt `athena.SYSTEM`)
+5. `hephaestus` `{tool, status, as_user, input}` after `hermes._act` when intent is action
+6. `themis` `{scenario_id, fact_score, hits, missing, leaks}` when the question matches a
+   scenario for that user (exact match after trim and case fold), using `themis.fact_check`
+7. `done` the full result dict: user, question, answer, sources, hidden, action, usage,
+   feed, latency_s, themis, cost_usd
 
-### 4.4 Behaviour
+Usage is accumulated in an `llm.Usage` the same way `hermes.ask` does; the streamed
+synthesize call records its usage from the final chunk.
 
-- Per-user `asyncio.Lock` around `hermes.ask` so two asks for the same user never overlap.
-- CORS allow-list: `https://<vercel-domain>`, `http://localhost:3000`.
-- `/grant` and `/reset` require header `X-Demo-Key` equal to env `DEMO_KEY`. The web app
-  sends it from a public env var; this is a speed bump against drive-by writes, not auth.
-- Startup: if `/app/state` is empty, copy `/app/state-pristine` into it. `/reset` deletes
-  `/app/state`, copies pristine back, then `os._exit(0)`. Fly's restart policy brings the
-  machine back in a few seconds; the UI polls `/health` and shows "restarting".
-- Config: `SYSTEM_ROOT_DIRECTORY=/app/state/system`, `DATA_ROOT_DIRECTORY=/app/state/data`,
-  `HF_HUB_OFFLINE=1`, `TOKENIZERS_PARALLELISM=false`, `ENABLE_BACKEND_ACCESS_CONTROL=true`
+### 5.3 Cost estimate
+
+`api/pricing.py`, USD per million tokens, labelled an estimate in the UI:
+gpt-4o-mini 0.15 in, 0.60 out; claude-sonnet-4-5 3.00 in, 15.00 out; claude-haiku-4-5
+1.00 in, 5.00 out.
+
+### 5.4 Behaviour
+
+- Per-user `asyncio.Lock` around chat, ask, sync, notes and insights.
+- CORS allow-list: the Vercel domain and `http://localhost:3000`.
+- Startup copies `/app/state-pristine` into `/app/state` when the latter is empty.
+  `/reset` deletes the live copy, restores pristine, then `os._exit(0)`.
+- Env: `SYSTEM_ROOT_DIRECTORY=/app/state/system`, `DATA_ROOT_DIRECTORY=/app/state/data`,
+  `HF_HUB_OFFLINE=1`, `TOKENIZERS_PARALLELISM=false`, `ENABLE_BACKEND_ACCESS_CONTROL=true`,
   plus the LLM, embedding, Respan and Scalekit variables from `.env`.
 
-## 5. Web app
+## 6. Web app
 
-### 5.1 Stack
+### 6.1 Stack
 
 Next.js 15 App Router, TypeScript, Tailwind v4, Motion (`motion/react`) for reveals and
-layout transitions, `three` for the brain (plain three in one client component, no fiber),
-`@phosphor-icons/react` at stroke 1.5, fonts through `next/font/google`: Cormorant
-Garamond (500, 600, italic 500), Geist, Geist Mono. One icon family, one font stack.
+layout transitions, `three` for the brain in one client component, `@phosphor-icons/react`
+at stroke 1.5, fonts through `next/font/google`: Cormorant Garamond (500, 600, italic 500),
+Geist, Geist Mono. SSE through `fetch` with a `ReadableStream` reader (POST body needed).
 
-### 5.2 Design tokens
+### 6.2 Design tokens
 
-Defined once in `web/app/globals.css` as CSS variables and mapped into Tailwind's theme.
-Dark theme locked; no light mode.
+Defined once in `web/app/globals.css` and mapped into Tailwind. Dark theme locked.
 
 ```text
 --bg #121010   --bg-2 #181514   --bg-3 #201b19   --line #2b2421   --line-2 #3b312b
 --fg #efe6d8   --fg-2 #c3b6a5   --muted #8a7c6c
 --accent #c8602c   --accent-hi #e8843f   --accent-dim rgba(200,96,44,.16)   --accent-ink #1c0d05
-radius 2px everywhere; buttons uppercase 13px tracking .08em; data in Geist Mono tabular
+radius 2px; buttons uppercase 13px tracking .08em; data in Geist Mono tabular; serif for names
 ```
 
-The accent has one meaning: lit, readable, granted. Hidden or inactive things are neutral.
-Semantic state in the console (a failed fact check) uses muted, never a second hue.
+The accent means lit, readable, granted. Hidden or inactive is neutral. Semantic failure
+(a failed fact check) is muted, never a second hue.
 
-### 5.3 Landing page sections
+### 6.3 Landing page sections
 
-Each section is its own server component; motion lives in client leaves.
+Unchanged from v1 except where noted. Each section is a server component; motion lives in
+client leaves.
 
-1. **Nav.** Brand mark and wordmark, four anchors, one primary CTA "Open the demo". 72px.
+1. **Nav.** Brand, four anchors, one CTA "Open the app". 72px.
 2. **Hero.** Asymmetric split. Left: eyebrow "A company brain, run by gods", headline
    "It knows your company. It only tells you what you may know." with the last clause in
-   italic accent, a subtext of at most 20 words (the mockup's is trimmed to fit), CTAs
-   "Open the demo" and "View on GitHub". Right: the
-   3D brain in autoplay mode cycling regions every 2.6 s with a mono caption "region · agent".
-3. **The problem.** One carved statement headline, two columns under hairlines.
-4. **The pantheon (scrollytelling).** Left: the 3D brain, sticky, with a label showing the
-   active agent and region. Right: seven agent blocks, each 62vh tall on desktop, with the
-   region name, the god's name in 64px serif, "In you" (what the region does in a human),
-   "In Pantheon" (what the agent does), and the layer it sits on. The block in view is
-   full opacity; others dim to 38%. Copy is in the mockup and is final unless the backend
-   session changes an agent's job.
-5. **The access story.** Three beats in one hairline grid: Isolation, Alice shares, Changed
-   result. The middle beat carries the accent tint. Each beat shows real feed lines from the
-   recorded run.
-6. **Three layers.** Scalekit, Cognee, Respan as three columns under a rule. Logos inline
-   SVG from Simple Icons where a mark exists; otherwise the serif wordmark.
-7. **Evaluation.** Two numbers at 96px serif, before and after, read from the committed
-   results files at build time; the change named as the grant. If either file is missing,
-   the section renders sample values with a visible "sample" label.
-8. **Quickstart.** The five README commands in a code block with a copy button.
-9. **Footer.** Hackathon credit and repo link.
+   italic accent, subtext of at most 20 words, CTAs "Open the app" and "View on GitHub".
+   Right: the 3D brain in autoplay mode with a mono caption "region · agent".
+3. **The problem.** One carved statement, two columns under hairlines.
+4. **The pantheon (scrollytelling).** Sticky 3D brain left, seven agent blocks right, each
+   with the region, the god's name, "In you", "In Pantheon" and the layer. Copy as in the
+   mockup. Mnemosyne's copy names three sources now: Slack, GitHub and Notion.
+5. **The access story.** Three beats in one hairline grid with real feed lines.
+6. **Three layers.** Scalekit, Cognee, Respan.
+7. **Evaluation.** Three numbers from the committed results files: isolation 0.99 with
+   zero leaks, coverage before the share 0.89, after 1.00. The change named as the grant.
+8. **Quickstart.** README commands with a copy button.
+9. **Footer.**
 
-Eyebrows: hero and pantheon only. Layout families: split, statement, scrolly, grid, columns,
-numbers, code. Hero fits the first viewport at 1440x900 and at 390 wide.
+### 6.4 The 3D brain (`web/components/Brain.tsx`)
 
-### 5.4 The 3D brain (`web/components/Brain.tsx`)
-
-**What it is.** A point cloud of about 2,400 nodes (1,200 on screens under 768px) sampled
-inside a parametric brain volume, each linked to its two nearest neighbours, drawn with
-`three` as `Points` plus `LineSegments`. It is the knowledge graph the product builds,
-not an illustration.
+**What it is.** A point cloud of about 2,400 nodes (1,200 under 768px) sampled inside a
+parametric brain volume, linked to two nearest neighbours, drawn with `three` as `Points`
+and `LineSegments`. In the app it can also be fed the real graph (6.6).
 
 **Geometry.** Two hemispheres, each an ellipsoid (rx .62, ry .48, rz .40) offset ±0.10 on
-z, with a radial displacement of ±0.04 from three summed sine terms to suggest gyri. Points
-within 0.03 of z = 0 are dropped to form the longitudinal fissure. A cerebellum ellipsoid
-(rx .22, ry .14, rz .26) sits at (−.42, −.34, 0). A brain stem cylinder (r .07) runs from
-(−.28, −.40, 0) down to (−.30, −.78, 0). Sampling is seeded so the cloud is identical on
-every load. Neighbour search uses a uniform grid, under 60 ms at 2,400 points, and runs
-once on mount.
+z, with ±0.04 radial displacement from three summed sine terms for gyri. Points within 0.03
+of z = 0 dropped for the fissure. Cerebellum ellipsoid (rx .22, ry .14, rz .26) at
+(−.42, −.34, 0). Brain stem cylinder (r .07) from (−.28, −.40, 0) to (−.30, −.78, 0).
+Seeded sampling; grid neighbour search under 60 ms; built once on mount.
 
-**Regions.** Assigned by position in the same way as the 2D mockup, now in 3D:
-thalamus (sphere r .10 at (0,.02,0)), amygdala (two spheres r .06 at (.12,−.16,±.22)),
-hippocampus (two curved tubes r .05 from (.08,−.18,±.24) to (−.18,−.14,±.26)), prefrontal
-(x > .36 and y > −.10), orbitofrontal (x > .26 and −.34 < y ≤ −.10), motor (−.08 < x < .12
-and y > .36), sleep (whole brain), everything else cortex.
+**Regions.** thalamus (sphere r .10 at (0,.02,0)), amygdala (two spheres r .06 at
+(.12,−.16,±.22)), hippocampus (two tubes r .05 from (.08,−.18,±.24) to (−.18,−.14,±.26)),
+prefrontal (x > .36, y > −.10), orbitofrontal (x > .26, −.34 < y ≤ −.10), motor
+(−.08 < x < .12, y > .36), sleep (whole brain), else cortex.
 
-**Camera choreography.** An orbit target per region as (azimuth°, elevation°, distance):
+**Camera choreography.** Orbit target per region as (azimuth°, elevation°, distance):
+thalamus (60, 18, 1.9); amygdala (95, −22, 1.8); hippocampus (120, −30, 1.8); prefrontal
+(15, 8, 2.1); motor (40, 70, 2.0); orbitofrontal (20, −35, 1.9); sleep: continuous, 10°
+elevation, 2.4, one turn per 40 s. Camera and glow ease with a damped spring (stiffness
+120, damping 22). Lit nodes accent 3.2px with an additive halo; unlit bone at 22%, 1.8px;
+edges touching the lit region accent 40%, others bone 7%; 2.2px sinusoidal drift. Renders
+only while in viewport and the tab is visible.
 
-| region | az | el | dist | note |
-|---|---|---|---|---|
-| thalamus | 60 | 18 | 1.9 | three-quarter front, pushed in |
-| amygdala | 95 | −22 | 1.8 | from below, side |
-| hippocampus | 120 | −30 | 1.8 | continues the orbit downward and back |
-| prefrontal | 15 | 8 | 2.1 | nearly face on |
-| motor | 40 | 70 | 2.0 | from above |
-| orbitofrontal | 20 | −35 | 1.9 | from below the eyes |
-| sleep | continuous | 10 | 2.4 | slow full rotation, 40 s per turn |
+**Modes.** `autoplay` (hero): cycles regions every 2.6 s, pointer parallax ±6° through a
+motion value. `scroll` (pantheon section): `activeRegion` prop set by an
+IntersectionObserver with `rootMargin: -40% 0px -40% 0px`; section progress from Motion
+`useScroll` adds ±12° azimuth so the brain keeps turning between blocks. `live` (app):
+`activeRegion` is driven by chat events (6.5) and the point cloud is the parametric one;
+`graph` (app graph view): nodes are the real Cognee graph laid out by a force simulation
+inside the same volume (6.6).
 
-Per frame the camera eases toward its target with a critically damped spring (stiffness
-120, damping 22). Each region's glow eases 0 to 1 the same way. Node material: lit nodes
-are accent at size 3.2px with an additive halo sprite; unlit nodes are bone at 22% and
-1.8px; edges touching the lit region are accent at 40%, others bone at 7%. Ambient
-drift: each node has a 2.2px sinusoidal wobble. All of this runs in the render loop only
-while the canvas is in the viewport (IntersectionObserver) and the tab is visible.
+**Reduced motion and fallback.** Instant camera and glow changes, no drift, no autoplay.
+Without WebGL, the 2D canvas version from the mockup with the same region logic. Canvas is
+`aria-hidden`; the visible label carries the information. Poster image under the hero
+canvas until it mounts.
 
-**Scroll binding.** The pantheon section observes its seven agent blocks with
-`rootMargin: -40% 0px -40% 0px`; the block crossing the centre band sets `activeRegion`.
-The component receives it as a prop and lerps. Section scroll progress (Motion
-`useScroll` on the section) adds a continuous ±12° azimuth offset so the brain keeps
-turning between blocks. No `scroll` event listeners anywhere.
+### 6.5 The app (`/app`)
 
-**Modes.** `mode="autoplay"` (hero) cycles regions on a 2.6 s timer and adds pointer
-parallax of ±6° from the cursor using a motion value, never React state.
-`mode="scroll"` (pantheon) takes `activeRegion` from the parent.
+A product shell, not a dashboard. Left rail with Chat, Graph, Insights, Connections, Evals
+and, at the bottom, the user switch (Alice, Bob) with their connected sources. The brain
+sits in a right column on wide screens, 40% width, always visible; on narrow screens it
+collapses to a strip above the chat. Mode and reset live in the top bar.
 
-**Reduced motion and fallback.** Under `prefers-reduced-motion`, camera moves and glow
-changes are instant, drift and autoplay are off, and the pantheon brain still follows the
-active block. If WebGL is unavailable the component renders the 2D canvas version from
-the mockup with the same region logic. The canvas is `aria-hidden`; the visible label next
-to it carries the information.
+**Chat.** A conversation thread per user, newest at the bottom, with the composer pinned.
+Each assistant turn renders as it streams:
 
-**Performance.** One `WebGLRenderer` per instance, pixel ratio capped at 2, geometry built
-once, materials shared, disposed on unmount. Target 60 fps on an M1 MacBook Air and 30 fps
-on a mid-range phone. The landing page's LCP element is the hero headline, not the canvas;
-the brain mounts after hydration with a static poster image (`/brain-poster.webp`, a
-captured frame) underneath to avoid a blank hero.
+- A step rail above the answer: Hermes, Cerberus, Athena, Hephaestus. Each name goes from
+  muted to accent as its event arrives, with its one-line detail beside it ("routed:
+  question via gpt-4o-mini", "may read alice-brain; hidden none", "7 passages from slack,
+  github, notion"). Hephaestus shows "not needed" for questions. The brain lights the
+  matching region at the same moment: thalamus, amygdala, prefrontal, motor.
+- The answer streams token by token in the serif-free body face, with facts highlighted in
+  accent when a Themis result exists (the `must_mention` terms).
+- Source chips, lit when present. A hidden card when `hidden` is non-empty: "N datasets you
+  can't see", each with owner and the extra tags, and a Grant button that calls `/grant` as
+  the owner. After a grant the card turns accent, offers "Ask again", and a Revoke link
+  appears in the user switch so the demo can be reset without restarting.
+- An action card when `action` is non-null: tool, status, acting identity, the drafted
+  text, and an Execute button that calls `/action/execute` with the same input. Executed
+  actions show the Scalekit response and a link to the Slack channel or GitHub issue.
+- A Themis line when present, and a footer with per-step model, tokens, estimated cost
+  and latency, collapsed by default.
 
-### 5.5 Demo console (`/demo`)
+Scenario chips above the composer for the demo questions from `docs/DEMO.md`: PR #3
+blocker, Pro plan price, Launch risk, Open a GitHub issue for Marco.
 
-Density 8, no marketing moves. Layout at 1440x900 fits in one viewport without scrolling.
+**Compare.** A toggle in the composer sends the question as both users through `/ask` and
+renders two answers side by side in one turn, with each user's hidden card. This is the
+isolation beat on one screen.
 
-- **Top bar.** Brand, "Northwind Labs", three layer badges, a Respan trace link, a live
-  or recorded pill, "Reset" (calls `/reset`, shows a restarting state until `/health`
-  answers).
-- **Question bar.** One input, "Ask both", four scenario chips: PR #42 blocker, Pro plan
-  price, Launch risk, Draft Slack to Priya. Enter submits.
-- **Two panes, Alice and Bob.** Identity line with sources. Agent feed with four rows that
-  light in order (250 ms stagger) once the response arrives; Hephaestus row shows "not
-  needed" for questions. Answer with accent-highlighted facts (no markup from the model;
-  the UI highlights scenario `must_mention` terms when a Themis result exists). Source
-  chips, lit when present. Hidden card "N datasets you can't see" listing name, owner and
-  sources; on Bob's side it carries "Grant as Alice", which calls `/grant` and then
-  offers "Ask again". Action card when `action` is non-null: tool, status, acting
-  identity, draft text. Themis line when present: fact score, hits, missing, leaks. Usage
-  table: step, model, prompt/completion tokens, estimated cost, total latency.
-- **Eval strip.** Before and after means from `/evals`, the change named "grant alice to
-  bob", and paired per-scenario bars. Hidden entirely when both files are missing.
-- **States.** Loading: skeleton rows in the shape of the feed and answer. Error: inline
-  message in the pane with the server's detail. Recorded mode: a pill and a note that the
-  API is unreachable and answers come from the recorded run.
+**Graph.** Tier 2. The brain switches to `graph` mode: nodes are the real Cognee nodes for
+the current user's readable datasets, coloured by `source:` tag (accent for the hovered
+source, bone otherwise), labelled on hover, with a side list of datasets and counts.
+Switching user re-fetches; after a grant Bob's graph visibly grows. A search box runs a
+recall and highlights the returned chunks' nodes.
 
-### 5.6 Recorded run
+**Insights.** Tier 3. "Explore" runs `/insights` for the current user and renders three
+cards, each with a Hephaestus suggestion (draft a message, open an issue) the user can
+execute from the card.
 
-`web/data/recorded.json` holds real `/ask` responses captured once from the local API for
-the four scenario questions, for both users, before and after the grant. The hero replay
-and recorded mode read it. A script `web/scripts/record.ts` regenerates it against a
-running API.
+**Connections.** Tier 2. Per user, the three Scalekit connections with status, a "Connect"
+button that opens the authorization link in a new tab, and "Sync now" with channel, repo
+and Notion query fields prefilled from the demo script. Progress streams in a drawer. This
+is the Pull beat of the demo and is the in-app Scalekit setup.
 
-## 6. Deployment
+**Evals.** Three numbers, the change named, per-scenario rows with before and after,
+missing and leaks, and a link to the Respan trace.
 
-### 6.1 Docker image
+**Add knowledge.** Tier 3. A composer mode "Remember this" sends `/notes`; the brain lights
+the hippocampus while it runs.
 
-Multi-stage, adapted from Cognee's official Dockerfile:
+**States.** Loading: skeleton step rail and answer block. Error: inline in the turn with
+the server's detail. Recorded mode: a pill and a note that answers come from the recorded
+run. Restarting after reset: a full-width notice polling `/health`.
 
-1. `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` installs `cognee scalekit-sdk-python
-   openai python-dotenv respan-ai fastapi uvicorn` from a pinned `api/requirements.txt`.
-2. `ghcr.io/ladybugdb/extension-repo` provides the Ladybug JSON extension, copied to the
-   path Cognee's image uses, because the runtime install fails for a non-root user.
-3. Final stage copies `pantheon/`, `api/`, `evals/scenarios.json`, `evals/results-*.json`,
-   and the ingested state into `/app/state-pristine/{system,data}`. Runs as uid 1000.
-   `CMD uvicorn api.server:app --host 0.0.0.0 --port 8080`.
+### 6.6 Real graph rendering
 
-The state is copied only after the backend session has exited cleanly, so Ladybug's
-write-ahead log is checkpointed; the build script refuses to run if any `.lbug.wal` file
-is larger than zero bytes. Build with `--platform linux/amd64` from Apple Silicon.
+`/graph` returns at most 600 nodes. The client runs a 3D force simulation (d3-force-3d) for
+300 ticks on a worker, then scales positions into the brain volume so the real graph sits
+inside the silhouette. Node colour from `node_set`: one bone tone per source, accent for
+the active source or search hits. Edges are drawn at 10% bone. Labels on hover only.
 
-### 6.2 Fly
+### 6.7 Recorded run
+
+`web/data/recorded.json` holds real `/ask` responses captured from the local API for the
+four demo questions, both users, before and after the grant. The hero replay and recorded
+mode read it. `web/scripts/record.ts` regenerates it.
+
+## 7. Deployment
+
+### 7.1 Docker image
+
+Multi-stage, adapted from Cognee's official Dockerfile: uv on Python 3.12 Bookworm slim
+installs `api/requirements.txt`; the Ladybug extension stage copies the JSON extension to
+the path Cognee's image uses; the final stage copies `pantheon/`, `api/`, `evals/*.json`,
+`sample_data/`, `docs/DEMO.md` and the ingested state into `/app/state-pristine`, runs as
+uid 1000, `CMD uvicorn api.server:app --host 0.0.0.0 --port 8080`. The build script refuses
+to run while any `.lbug.wal` is non-empty (backend must have exited cleanly). Build with
+`--platform linux/amd64`.
+
+### 7.2 Fly
 
 `fly.toml`: app `pantheon-api`, region `sjc`, `min_machines_running = 1`,
-`auto_stop_machines = false`, 1 GB shared CPU, internal port 8080, health check on
-`/health`, restart policy always. Secrets imported from `.env`. Deploy is `fly deploy`.
+`auto_stop_machines = false`, 1 GB shared CPU, internal port 8080, health check `/health`,
+restart policy always. SSE needs no special config on Fly.
 
-### 6.3 Vercel
+### 7.3 Vercel
 
-Root directory `web`. Env: `NEXT_PUBLIC_PANTHEON_API`, `NEXT_PUBLIC_DEMO_KEY`. Production
-branch is whatever branch holds this work; preview deploys for PRs.
+Root `web`. Env `NEXT_PUBLIC_PANTHEON_API`, `NEXT_PUBLIC_DEMO_KEY`. Production branch is
+the branch holding this work until merged.
 
-## 7. Testing
+## 8. Testing
 
-- `api/tests/test_server.py` with FastAPI's TestClient and `hermes.ask` monkeypatched:
-  ask returns the contract shape plus `themis` and `cost_usd`; a matching scenario yields
-  a fact score; grant requires the demo key and returns the message; evals handles
-  missing files; health reports mode.
-- `api/tests/test_pricing.py`: cost for a known usage list.
-- Web: Vitest for the brain's region assignment and the neighbour search (pure
-  functions), and for the cost and highlight helpers. Playwright: `/demo` in recorded mode
-  asks a question and shows both panes, grant flips Bob's hidden card, landing page has no
-  horizontal overflow at 390 and 1440, and each agent block lights the matching label.
-  Screenshots saved as evidence.
-- Lighthouse on `/` before calling it done: performance above 85 on desktop.
+- `api/tests/test_pipeline.py`: with the pantheon functions monkeypatched, the SSE stream
+  emits hermes, cerberus, athena.recall, athena.token, done in order; action intent adds
+  hephaestus; a matching scenario adds themis; usage and cost_usd are summed.
+- `api/tests/test_server.py`: routes, demo key enforcement, evals with missing files,
+  graph shape with a stubbed visualize call, connections with a stubbed Scalekit client.
+- Web: Vitest for region assignment, neighbour search, SSE parser, cost and highlight
+  helpers. Playwright: landing has no horizontal overflow at 390 and 1440 and each agent
+  block lights the matching label; `/app` in recorded mode streams a turn and shows the
+  step rail, Grant flips Bob's hidden card, compare renders two answers. Screenshots kept
+  as evidence.
+- Lighthouse on `/`: performance above 85 on desktop.
 
-## 8. Order of work
+## 9. Order of work
 
-1. `api/` server and tests against the local Cognee state (needs the backend session idle).
-2. `web/` scaffold, tokens, fonts, console at `/demo` in recorded mode, then live.
-3. Record `recorded.json` from the local API.
-4. Brain component: geometry and regions with unit tests, then rendering, then choreography.
-5. Landing page sections.
-6. Dockerfile and Fly deploy as soon as ingest is final.
-7. Vercel, Playwright pass, Lighthouse, screenshots.
+1. `api/` pipeline with SSE, ask, grant, revoke, execute, scope, evals, health; tests.
+2. `web/` scaffold, tokens, fonts, app shell, chat with streaming in recorded mode, then
+   live; compare; hidden card; action card; evals page.
+3. Record `recorded.json`.
+4. Brain: geometry and regions with tests, rendering, choreography, live mode in the app.
+5. Landing page.
+6. Dockerfile, Fly deploy, Vercel. Tier 1 complete; demo can run.
+7. Graph route and view; Connections page and sync. Tier 2.
+8. Notes and Insights. Tier 3.
+9. Playwright pass, Lighthouse, screenshots.
 
-## 9. Risks and open questions
+## 10. Risks and open questions
 
-- The backend session may change the `hermes.ask` shape or the agent list. The console
-  renders unknown feed lines verbatim and the pantheon section copy is in one data file.
-- Grants on the hosted API are shared state. Reset exists for that; the console shows the
-  current grant list so a judge can see whether someone already granted.
-- Three.js adds roughly 150 KB gzipped. Acceptable for a landing page whose point is the
-  brain; it is dynamically imported so `/demo` never loads it.
-- Branching: both Claude sessions share one working tree on `main`. This work lands on a
-  branch through a separate git worktree so the backend session's checkout is untouched.
-  Decision needed from Usman on whether to merge to `main` before the demo or deploy from
-  the branch.
+- Streaming the synthesize call needs the Respan gateway to support `stream=True` on chat
+  completions. If it does not, the API falls back to emitting the whole answer in one
+  `athena.token` event, and the UI still shows the step rail live.
+- Cognee's `fetch_visualization_data` is an internal API in 1.6.3 and may change; the
+  graph route isolates it behind one function with a test stub.
+- Live sync on the hosted API writes to Cognee and takes tens of seconds; the per-user lock
+  blocks that user's chat meanwhile. The UI says so.
+- Grants on the hosted API are shared state; Revoke and Reset exist for that.
+- `three` plus `d3-force-3d` add roughly 180 KB gzipped, dynamically imported.
+- Branching: both sessions share one working tree on `main`; the backend session has been
+  committing there, including this spec. Decision needed from Usman: a `web` branch in a
+  separate worktree, or everyone on `main` for the hackathon.

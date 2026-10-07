@@ -59,11 +59,21 @@ def _act(user_key: str, question: str, answer: str, plan: dict, usage: llm.Usage
         title = plan.get("title") or body.split(".")[0][:80]
         tool_input = {"owner": owner, "repo": repo, "title": title, "body": body + "\n\n_Opened by Pantheon (Hephaestus) on behalf of the requesting user via Scalekit._"}
         conn = config.GITHUB_CONNECTION
-    return hephaestus.act(user_key, tool, tool_input, conn, dry_run)
+    result = hephaestus.act(user_key, tool, tool_input, conn, dry_run)
+    # Log it as a proposal too, so the UI can approve it later if this was a dry run.
+    proposal = hephaestus.new_proposal(user_key, tool, tool_input, "requested by the user", "requested", question)
+    if result.get("status") == "executed":
+        hephaestus._append({**proposal, "status": "executed", "result": result, "decided_at": hephaestus._now()})
+    return {**result, "id": proposal["id"]}
+
+
+@task(name="hephaestus.propose")
+def _propose(user_key: str, question: str, answer: str, hidden: dict, usage: llm.Usage) -> list[dict]:
+    return hephaestus.propose(user_key, question, answer, hidden, usage)
 
 
 @workflow(name="pantheon.ask")
-async def ask(user_key: str, question: str, dry_run: bool = True) -> dict:
+async def ask(user_key: str, question: str, dry_run: bool = True, suggest: bool = True) -> dict:
     t0 = time.time()
     usage = llm.Usage()
     feed: list[str] = []
@@ -80,7 +90,13 @@ async def ask(user_key: str, question: str, dry_run: bool = True) -> dict:
     if plan.get("intent") == "action":
         action = _act(user_key, question, result["answer"], plan, usage, dry_run)
         feed.append(f"Hephaestus: {action['tool']} {action['status']} as {config.USERS[user_key]}")
+    suggested: list[dict] = []
+    if suggest and plan.get("intent") != "action":
+        suggested = _propose(user_key, question, result["answer"], scope.get("hidden") or {}, usage)
+        if suggested:
+            feed.append("Hephaestus proposed: " + "; ".join(f"{s_['tool']} [{s_['id']}]" for s_ in suggested))
     return {
+        "suggested_actions": suggested,
         "user": user_key,
         "question": question,
         "answer": result["answer"],

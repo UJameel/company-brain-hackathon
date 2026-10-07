@@ -18,6 +18,11 @@ def main() -> None:
     i.add_argument("--channel", action="append", default=None)
     i.add_argument("--github-repo", default=None)
     i.add_argument("--notion-query", default=None, help="Notion search query to pull pages for (live only)")
+    i.add_argument("--all", action="store_true", help="pull EVERY system the user has connected through Scalekit (live only)")
+
+    so = sub.add_parser("sources", help="Mnemosyne: list the systems of record a user has connected, and what a generic pull would call")
+    so.add_argument("--user", choices=list(config.USERS), default="alice")
+    so.add_argument("--plan", action="store_true", help="show the read-only tools the generic adapter would call per connection")
 
     a = sub.add_parser("ask", help="Hermes -> Cerberus -> Athena (-> Hephaestus)")
     a.add_argument("--user", choices=list(config.USERS), required=True)
@@ -61,6 +66,15 @@ def main() -> None:
     v = sub.add_parser("mcp", help="Scalekit Virtual MCP server: ensure it exists and mint a session token for a user")
     v.add_argument("--user", choices=list(config.USERS), default="alice")
 
+    ac = sub.add_parser("actions", help="Hephaestus: list proposed actions awaiting a decision")
+    ac.add_argument("--user", choices=list(config.USERS), default=None)
+
+    dc = sub.add_parser("decide", help="Hephaestus: approve / decline / revise a proposed action")
+    dc.add_argument("action_id")
+    dc.add_argument("decision", choices=["approve", "decline", "revise"])
+    dc.add_argument("--note", default=None, help="why, or how to change it (revise)")
+    dc.add_argument("--execute", action="store_true", help="approve for real through Scalekit (default dry-run)")
+
     m = sub.add_parser("improve", help="Morpheus: run Cognee's improve() on a user's dataset")
     m.add_argument("--user", choices=list(config.USERS), required=True)
 
@@ -73,8 +87,19 @@ async def _run(args) -> None:
         from . import mnemosyne
 
         for u in args.user or list(config.USERS):
-            r = await mnemosyne.ingest(u, args.live, args.channel or [], args.github_repo, args.notion_query)
+            r = await mnemosyne.ingest(u, args.live, args.channel or [], args.github_repo, args.notion_query, all_sources=args.all)
             print(json.dumps({"user": u, **r}))
+    elif args.cmd == "sources":
+        from . import mnemosyne, sources
+
+        systems = mnemosyne.discover(args.user)
+        for s_ in systems:
+            line = f"{s_['connection']:<18} {s_['status']:<8} {s_['adapter']}"
+            if args.plan and s_["adapter"] == "generic" and s_["status"] == "ACTIVE":
+                line += "  -> " + ", ".join(sources.generic_plan(mnemosyne._actions(), s_["connection"], config.USERS[args.user]))
+            print(line)
+        if not systems:
+            print(f"{args.user} has not connected any system yet. Run: python -m pantheon authorize --user {args.user}")
     elif args.cmd == "ask":
         from . import hermes
 
@@ -84,6 +109,8 @@ async def _run(args) -> None:
         print("\n" + r["answer"])
         if r["action"]:
             print("\naction:", json.dumps(r["action"], indent=2))
+        for s_ in r.get("suggested_actions", []):
+            print(f"\nHephaestus proposes [{s_['id']}] {s_['tool']}: {s_['rationale']}\n   {json.dumps(s_['input'])}\n   -> python -m pantheon decide {s_['id']} approve|decline|revise --note '...'")
         print(f"\nsources={r['sources']} hidden={r['hidden']} latency={r['latency_s']}s")
     elif args.cmd == "grant":
         from . import cerberus
@@ -128,6 +155,15 @@ async def _run(args) -> None:
         r = session_token(args.user)
         print(json.dumps({k: (v[:12] + "…" if k == "token" and v else v) for k, v in r.items()}, indent=2))
         print("\nClaude Code: claude mcp add --transport http pantheon", r["mcp_server_url"], "--header", '"Authorization: Bearer <token>"')
+    elif args.cmd == "actions":
+        from . import hephaestus
+
+        for p_ in hephaestus.pending(args.user):
+            print(f"[{p_['id']}] {p_['user']:<6} {p_['tool']:<22} {p_['origin']:<10} {json.dumps(p_['input'])[:110]}")
+    elif args.cmd == "decide":
+        from . import hephaestus
+
+        print(json.dumps(await hephaestus.decide(args.action_id, args.decision, args.note, dry_run=not args.execute), indent=2, default=str)[:1500])
     elif args.cmd == "improve":
         import cognee
         from .cerberus import get_or_create_user

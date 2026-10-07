@@ -10,7 +10,7 @@ Scalekit tab: three connections, Alice's connected accounts ACTIVE. Terminal:
 ```
 python -m pantheon ingest --user alice --live --github-repo UJameel/northwind-atlas --notion-query "Atlas Launch Plan"
 ```
-"Mnemosyne pulls GitHub and Notion *as Alice*, through Scalekit, no bot token. Slack is a recorded pull. Everything lands in Alice's Cognee dataset tagged by source."
+"Mnemosyne asks Scalekit which systems Alice connected and pulls every one of them as Alice, no bot token: GitHub and Notion live here, Slack recorded. Connect a CRM tomorrow and it is in the brain tomorrow. Everything lands in Alice's Cognee dataset tagged by source."
 
 **0:45 — Brain (35s)**
 ```
@@ -31,6 +31,7 @@ python -m pantheon ask --user bob "What will the Pro plan cost after the Atlas l
 "Same brain, same question, now $59 from #leadership. That's Cognee dataset permissions, and Scalekit decided what each user could pull in the first place."
 
 **2:10 — Act (20s)**
+Point at the two proposals under Bob's earlier answer: "Hephaestus proposed notifying Marco and asking Alice for access. Bob approves, declines, or revises. Decisions are remembered, so the brain learns how Bob likes to act."
 ```
 python -m pantheon ask --user alice "Open a GitHub issue asking Marco to add exponential backoff to the Paddle webhook handler so PR #3 can merge." --execute
 ```

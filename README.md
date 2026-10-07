@@ -2,7 +2,7 @@
 
 > Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07. Solo entry by Usman Jameel.
 
-Pantheon is a company brain for a fictional 40-person SaaS company, **Northwind Labs**. It pulls knowledge from Slack and GitHub *as each employee* (Scalekit), remembers it in a per-user knowledge graph (Cognee), answers cross-source questions with provenance, acts in the user's tools as them, and proves it works with an independent, traced evaluation (Respan).
+Pantheon is a company brain for a fictional 40-person SaaS company, **Northwind Labs**. Wherever the company lives, Pantheon pulls it: every system of record an employee has connected through Scalekit (400+ connectors: Slack, GitHub, Notion, Gmail, Calendar, Drive, Linear, Jira, HubSpot and the rest) is pulled *as that employee*, remembered in their per-user knowledge graph (Cognee), and queried with provenance. The more systems you connect, the better the brain gets. It acts in your tools as you, proposes follow-up actions you approve, decline or revise, and proves it works with an independent, traced evaluation (Respan).
 
 The twist: **every employee gets their own view of the brain.** Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers, because their Scalekit connections and their Cognee datasets differ. The brain tells Bob what exists that he cannot see and who to ask. Then Alice grants access live, and Bob's answer changes. The eval shows the before and after.
 
@@ -12,9 +12,9 @@ The twist: **every employee gets their own view of the brain.** Alice (eng lead)
 |---|---|---|---|
 | **Hermes** | thalamus | routes the request; picks the model per step through the Respan gateway; traces the run | Respan |
 | **Cerberus** | amygdala | authorization gate: Scalekit `identifier` == Cognee user; scopes recall to readable datasets; reports what is hidden; performs grants | Scalekit + Cognee |
-| **Mnemosyne** | hippocampus | pulls as each user via Scalekit; `remember()`s into that user's dataset with `node_set` provenance; records every pull to `sample_data/` | Scalekit → Cognee |
+| **Mnemosyne** | hippocampus | discovers every system the user has connected (Scalekit connected accounts), pulls each through a known adapter or the generic read-only adapter, `remember()`s into that user's dataset with `node_set` provenance; records pulls to `sample_data/` | Scalekit → Cognee |
 | **Athena** | prefrontal cortex | `recall()`s scoped passages; synthesises a cited answer; says what it cannot see | Cognee + Respan |
-| **Hephaestus** | motor cortex | acts as the user through Scalekit (`slack_send_message`, `githubpat_issue_create`); allow-listed, never destructive | Scalekit |
+| **Hephaestus** | motor cortex | acts as the user through Scalekit on request, and **proposes** follow-up actions after every answer; the user approves, declines or revises; decisions are remembered so the brain learns how you act | Scalekit |
 | **Themis** | orbitofrontal cortex | independent scorer: deterministic fact check + pinned LLM judge; before/after | Respan |
 | **Morpheus** | sleep | consolidation: Cognee `improve()` | Cognee |
 
@@ -52,12 +52,23 @@ python -m pantheon eval --label after
 python -m pantheon compare before after
 ```
 
-Live mode (your own Scalekit workspace, connections named `slack` and `githubpat`):
+Live mode (your own Scalekit workspace):
 
 ```bash
-python -m pantheon ingest --live --github-repo <owner>/<repo>
+python -m pantheon sources --user alice --plan        # every system Alice connected, and what a generic pull would call
+python -m pantheon ingest --user alice --live --all --github-repo <owner>/<repo> --notion-query "Launch Plan"
 python -m pantheon ask --user alice "Who owns the launch announcement? Draft them a Slack message." --execute
+python -m pantheon actions                            # proposals awaiting a decision
+python -m pantheon decide <id> approve|decline|revise --note "..."
 ```
+
+## Systems of record
+
+`pantheon/sources.py` is the registry. Known connectors (Slack, GitHub, Notion, Gmail, Google Calendar) have adapters that shape their records into documents. Any other connection the user has authorised goes through the **generic adapter**: Scalekit lists the connection's tools, Mnemosyne keeps the read-only ones that need no arguments, ranks them by how record-like they are (issues, messages, pages, events, contacts, deals over invites, emojis, templates), calls up to six, and remembers the results tagged `source:<connector>`. Connect a CRM and the brain knows your deals; connect a ticketing tool and it knows your incidents. Discovery is per user, so each brain is built from exactly what that person connected.
+
+## Actions
+
+Two paths. **Requested:** "open an issue for Marco" routes to Hephaestus, which drafts and executes as the user (dry-run unless `--execute`). **Proposed:** after every answer Hephaestus suggests up to two follow-ups (notify the waiting channel, file the follow-up issue, ask the dataset owner for access). Each is a proposal with an id. `decide <id> approve` executes it through Scalekit as the user; `decline` records it; `revise --note` redrafts and returns a new proposal. Every decision is remembered into the user's dataset (`source:pantheon kind:decision`), so the brain learns the person's preferences over time.
 
 ## Access story
 

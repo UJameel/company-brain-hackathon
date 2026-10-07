@@ -15,3 +15,5 @@ cognee-feedback.md
 .tools-cache.json
 *.live.json
 .pantheon_state.json
+.playwright-mcp/
+.pantheon_actions.jsonl

@@ -1,6 +1,6 @@
 """Mnemosyne (hippocampus): memory encoding.
 
-Pulls from each connected app AS EACH USER through Scalekit, turns every item into a
+Pulls from every system of record the user has connected, AS THAT USER, through Scalekit, turns every item into a
 provenance-tagged text document, and remembers it into that user's Cognee dataset.
 Every live pull is also recorded to sample_data/<user>.json so judges can replay the
 whole pipeline without the same SaaS accounts, and so the eval is reproducible."""
@@ -176,6 +176,49 @@ async def remember(user_key: str, pulled: dict) -> dict:
     return {"dataset": dataset, "documents": len(docs), "sources": sorted(sources)}
 
 
-async def ingest(user_key: str, live: bool, channels: list[str], github_repo: str | None, notion_query: str | None = None) -> dict:
+async def remember_docs(user_key: str, docs: list[tuple[str, list[str]]], manifest: list[dict] | None = None) -> dict:
+    user = await get_or_create_user(user_key)
+    dataset = config.dataset_for(user_key)
+    sources: set[str] = set()
+    all_tags: set[str] = set()
+    for text, tags in docs:
+        await cognee.remember(text, dataset_name=dataset, user=user, node_set=tags)
+        sources.update(t for t in tags if t.startswith("source:"))
+        all_tags.update(t for t in tags if not t.startswith("owner:"))
+    state = config.load_state()
+    entry = state.setdefault("datasets", {}).setdefault(dataset, {"owner": user_key, "sources": [], "tags": [], "documents": 0})
+    entry["sources"] = sorted(set(entry.get("sources", [])) | sources)
+    entry["tags"] = sorted(set(entry.get("tags", [])) | all_tags)
+    entry["documents"] = entry.get("documents", 0) + len(docs)
+    if manifest is not None:
+        entry["systems"] = manifest
+    config.save_state(state)
+    return {"dataset": dataset, "documents": len(docs), "sources": sorted(sources), "systems": manifest}
+
+
+def discover(user_key: str) -> list[dict]:
+    """The systems of record this user has connected through Scalekit."""
+    from . import sources
+
+    return sources.discover(_actions(), config.USERS[user_key])
+
+
+async def ingest(user_key: str, live: bool, channels: list[str], github_repo: str | None, notion_query: str | None = None,
+                 all_sources: bool = False, **options) -> dict:
+    """Recorded replay, the three demo sources, or (all_sources=True) every system the user
+    has connected: known connectors through their adapters, everything else generically."""
+    if live and all_sources:
+        from . import sources
+
+        docs, manifest = sources.pull_all(_actions(), config.USERS[user_key], user_key,
+                                          {"channels": channels, "github_repo": github_repo, "notion_query": notion_query, **options})
+        if not any(t.startswith("source:slack") for _, tags in docs for t in tags):
+            rec = load_recorded(user_key) if (config.SAMPLE_DIR / f"{user_key}.json").exists() else {}
+            if rec.get("slack"):
+                docs += [d for d in documents({**rec, "github": None, "notion": None}) ]
+                manifest.append({"connection": "slack", "provider": "slack", "status": "RECORDED", "adapter": "recorded", "documents": len(rec["slack"])})
+                print(f"[mnemosyne] slack: replaying recorded pull for {user_key}")
+        (config.SAMPLE_DIR / f"{user_key}.live.json").write_text(json.dumps({"user": user_key, "manifest": manifest, "documents": [t for t, _ in docs]}, indent=2))
+        return await remember_docs(user_key, docs, manifest)
     pulled = pull_live(user_key, channels, github_repo, notion_query) if live else load_recorded(user_key)
     return await remember(user_key, pulled)
