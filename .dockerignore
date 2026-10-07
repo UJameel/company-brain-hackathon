@@ -1,0 +1,14 @@
+.venv
+.git
+.claude
+.cognee_system
+.data_storage
+.superpowers
+.playwright-mcp
+web
+docs
+tests
+cognee-feedback.md
+.env
+**/__pycache__
+**/.pytest_cache
