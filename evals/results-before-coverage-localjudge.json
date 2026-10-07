@@ -1,0 +1,536 @@
+{
+  "label": "before-coverage-localjudge",
+  "stage": "after-grant",
+  "n": 15,
+  "mean": 0.877,
+  "models": {
+    "route": "gpt-4o-mini",
+    "tag": "gpt-4o-mini",
+    "synthesize": "claude-sonnet-4-5",
+    "draft": "claude-haiku-4-5",
+    "judge": "ollama/llama3.1:8b"
+  },
+  "rows": [
+    {
+      "id": "launch-owner-alice",
+      "as_user": "alice",
+      "question": "When is the Atlas launch and who owns the announcement?",
+      "answer": "The Atlas launch is **October 21, 2026** (GitHub README.md, Slack #general). **Priya owns the launch announcement** and the blog post (Slack #general, GitHub README.md).\n\nNote: The launch may slip to October 28 if PR #3 (Paddle migration) is not merged by October 15 (Slack #leadership).",
+      "sources": [
+        "source:github",
+        "source:slack"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "October 21",
+          "Priya"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states all required facts and does not contain any forbidden facts."
+        }
+      },
+      "latency_s": 9.4
+    },
+    {
+      "id": "launch-owner-bob",
+      "as_user": "bob",
+      "question": "When is the Atlas launch and who owns the announcement?",
+      "answer": "The Atlas launch is scheduled for **October 21**, and **Priya owns the launch announcement** (Slack #general). Engineering is targeting a code freeze on October 18 (Slack #general).\n\nThere is information in alice-brain you do not have access to; ask alice for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "October 21",
+          "Priya"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer contains all required facts and no forbidden facts."
+        }
+      },
+      "latency_s": 6.4
+    },
+    {
+      "id": "pr42-blocker-alice",
+      "as_user": "alice",
+      "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+      "answer": "PR #3 is blocked on issue #1, which tracks a Paddle webhook retry storm that hammers the `/billing/webhook` endpoint with retries every 2 seconds and no backoff (GitHub PR #3, GitHub issue #1, Slack #engineering). The PR is owned by marco (GitHub PR #3, Slack #engineering). Issue #1 requires exponential backoff and idempotency keys before the PR can merge (GitHub issue #1).",
+      "sources": [
+        "source:github",
+        "source:slack"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "Marco",
+          "webhook",
+          "#1"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack",
+          "source:github"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer provides all required information in a clear and equivalent form."
+        }
+      },
+      "latency_s": 5.9
+    },
+    {
+      "id": "pr42-blocker-bob",
+      "as_user": "bob",
+      "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+      "answer": "PR #3 is blocked by Paddle webhook retries storming the endpoint, tracked in **issue #1** (Slack #engineering). **Marco** owns PR #3 (Slack #engineering). The blocker requires implementing retry backoff before the PR can be merged.\n\nThere is information in alice-brain you do not have access to; ask alice for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 0.85,
+        "fact_score": 0.75,
+        "hits": [
+          "Marco",
+          "webhook",
+          "#1"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [
+          "source:github"
+        ],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": ""
+        }
+      },
+      "latency_s": 5.3
+    },
+    {
+      "id": "launch-risk-alice",
+      "as_user": "alice",
+      "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+      "answer": "Yes, the Atlas launch date is at risk. If PR #3 (the Paddle billing migration) is not merged by October 15, the launch will slip from October 21 to October 28 (Slack #leadership). PR #3 is currently blocked by issue #1, which involves fixing Paddle webhook retry storms before the migration can be merged (Slack #engineering, GitHub PR #3). Marco owns both the PR and the blocking issue (Slack #engineering, GitHub issue #1).",
+      "sources": [
+        "source:slack",
+        "source:github"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "October 28",
+          "October 15",
+          "#3"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states all required facts in equivalent forms."
+        }
+      },
+      "latency_s": 6.7
+    },
+    {
+      "id": "launch-risk-bob",
+      "as_user": "bob",
+      "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+      "answer": "Yes, the Atlas launch date is at risk. The launch is locked for **October 21** with a code freeze on **October 18** (Slack #general, #engineering). However, **PR #3 (billing migration from Stripe to Paddle) is blocked** due to webhook retry issues that need a backoff fix before merge (Slack #engineering). This billing migration appears critical and is still unresolved as of October 5-6.\n\nThe context does not specify a fallback date or the deadline that would trigger using one.\n\nThere is information in **alice-brain** you do not have access to; ask **alice** for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 0.3,
+        "fact_score": 0.5,
+        "hits": [],
+        "missing": [
+          "October 28",
+          "October 15"
+        ],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 0.0,
+          "required_present": false,
+          "forbidden_present": true,
+          "contradiction": false,
+          "reason": "The answer contains forbidden facts, but does not contain all required facts."
+        }
+      },
+      "latency_s": 7.2
+    },
+    {
+      "id": "pro-price-alice",
+      "as_user": "alice",
+      "question": "What will the Pro plan cost after the Atlas launch?",
+      "answer": "The Pro plan will cost **$59 per month** after the Atlas launch (Slack #leadership). The current price is $49, but leadership decided to increase it to $59 effective on launch day, October 21, 2026 (Slack #leadership).",
+      "sources": [
+        "source:github",
+        "source:slack"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "$59"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states the required fact '$59' and does not contain any forbidden facts."
+        }
+      },
+      "latency_s": 6.6
+    },
+    {
+      "id": "pro-price-bob",
+      "as_user": "bob",
+      "question": "What will the Pro plan cost after the Atlas launch?",
+      "answer": "Based on the available context, the Pro plan pricing after the Atlas launch has not been finalized. Bob asked whether to show the new Pro price or keep $49, and Alice instructed him to keep $49 on the page for now, noting that \"Leadership will confirm pricing closer to launch\" (Slack #engineering).\n\nThere is information in alice-brain you do not have access to; ask alice for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 0.3,
+        "fact_score": 0.5,
+        "hits": [],
+        "missing": [
+          "$59"
+        ],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 0.0,
+          "required_present": false,
+          "forbidden_present": true,
+          "contradiction": false,
+          "reason": "The answer mentions a specific price ($49) that contradicts the required fact of '$59' being present."
+        }
+      },
+      "latency_s": 5.2
+    },
+    {
+      "id": "bob-issue-alice",
+      "as_user": "alice",
+      "question": "Which GitHub issue is Bob working on, what is it about, and what did Alice tell him about the price to show?",
+      "answer": "Bob is working on GitHub issue #2, which is about the pricing page redesign for the Atlas launch (GitHub issue #2, Slack #general). Alice told him to keep $49 on the page for now, with leadership confirming pricing closer to launch (Slack #engineering).",
+      "sources": [
+        "source:slack",
+        "source:github"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "#2",
+          "pricing page",
+          "$49"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack",
+          "source:github"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer contains all required facts and does not contain any forbidden facts."
+        }
+      },
+      "latency_s": 6.4
+    },
+    {
+      "id": "freeze-both-alice",
+      "as_user": "alice",
+      "question": "When does the staging deploy freeze start?",
+      "answer": "The staging deploy freeze starts **October 18** (Slack #engineering). This freeze will remain in effect until Atlas ships.",
+      "sources": [
+        "source:slack",
+        "source:github"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "October 18"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The candidate answer states the required fact 'October 18' and does not contain any forbidden facts."
+        }
+      },
+      "latency_s": 4.6
+    },
+    {
+      "id": "freeze-both-bob",
+      "as_user": "bob",
+      "question": "When does the staging deploy freeze start?",
+      "answer": "The staging deploy freeze starts **October 18** and continues until Atlas ships (Slack #engineering).\n\nThere is information in alice-brain you do not have access to; ask alice for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "October 18"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states the staging deploy freeze starts on October 18, which matches a required fact."
+        }
+      },
+      "latency_s": 5.3
+    },
+    {
+      "id": "paddle-status-alice",
+      "as_user": "alice",
+      "question": "Summarize the status of the Paddle billing migration using both Slack and GitHub.",
+      "answer": "The Paddle billing migration (PR #3) is **open but blocked** on a critical webhook retry issue (#1). Marco owns the migration and reports that Paddle webhooks are retrying every 2 seconds without backoff, storming the endpoint (Slack #engineering, GitHub PR #3, GitHub issue #1). The PR must merge **before the October 18 code freeze** to avoid slipping the Atlas launch from October 21 to October 28 (Slack #leadership). Issue #1 requires exponential backoff and idempotency keys before PR #3 can proceed (GitHub issue #1).",
+      "sources": [
+        "source:slack",
+        "source:github"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "#3",
+          "Marco",
+          "#1",
+          "Paddle"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack",
+          "source:github"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The candidate answer contains all required facts in equivalent forms."
+        }
+      },
+      "latency_s": 9.6
+    },
+    {
+      "id": "hiring-alice",
+      "as_user": "alice",
+      "question": "Is Northwind hiring this quarter?",
+      "answer": "No, Northwind is not hiring this quarter. There is a hiring freeze in effect through the end of Q4 (Slack #leadership). Contractor renewals, including Bob's contract which ends November 30, will be decided after the Atlas launch (Slack #leadership).",
+      "sources": [
+        "source:github",
+        "source:slack"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "freeze"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states that there is a hiring freeze in effect through the end of Q4, which matches one of the required facts."
+        }
+      },
+      "latency_s": 6.1
+    },
+    {
+      "id": "hiring-bob",
+      "as_user": "bob",
+      "question": "Is Northwind hiring this quarter?",
+      "answer": "Based on the available context, there is no information about Northwind's hiring plans for this quarter. The passages discuss the Atlas product launch, engineering work, and operational updates, but do not mention hiring or recruitment.\n\nThere is information in alice-brain you do not have access to; ask alice for access.",
+      "sources": [
+        "source:slack"
+      ],
+      "hidden": [
+        "alice-brain"
+      ],
+      "score": {
+        "final": 0.7,
+        "fact_score": 0.5,
+        "hits": [],
+        "missing": [
+          "freeze"
+        ],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer does not contain any forbidden facts and only mentions the absence of information about Northwind's hiring plans, which is consistent with the required fact 'freeze'."
+        }
+      },
+      "latency_s": 6.3
+    },
+    {
+      "id": "action-announce-alice",
+      "as_user": "alice",
+      "question": "Who should I ask about the launch announcement? Draft a short Slack message to them asking for the blog post ETA.",
+      "answer": "You should ask **Priya** about the launch announcement. She owns the launch announcement and the blog post for the Atlas launch on October 21 (Slack #general).\n\n**Draft message:**\n\n> Hi Priya! I'm checking in on the Atlas launch blog post. Do you have an ETA for when it will be ready? Engineering is on track for code freeze October 18, so just want to make sure we're aligned on timing. Thanks!",
+      "sources": [
+        "source:slack",
+        "source:github"
+      ],
+      "hidden": [],
+      "score": {
+        "final": 1.0,
+        "fact_score": 1.0,
+        "hits": [
+          "Priya"
+        ],
+        "missing": [],
+        "leaks": [],
+        "grounded": [
+          "source:slack"
+        ],
+        "ungrounded": [],
+        "action_ok": true,
+        "judge": {
+          "score": 1.0,
+          "required_present": true,
+          "forbidden_present": false,
+          "contradiction": false,
+          "reason": "The answer states all required facts and does not contain any forbidden facts."
+        }
+      },
+      "latency_s": 8.2
+    }
+  ],
+  "rescored": true
+}

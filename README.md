@@ -10,7 +10,7 @@ The twist: **every employee gets their own view of the brain.** Alice (eng lead)
 
 | Agent | Brain region | Job | Layer |
 |---|---|---|---|
-| **Hermes** | thalamus | routes the request; picks the model per step through the Respan gateway; traces the run | Respan |
+| **Hermes** | thalamus | routes the request; picks the model per step: a local 8B model (Ollama) for closed-set decisions, gateway models for writing; traces the run | Respan + Ollama |
 | **Cerberus** | amygdala | authorization gate: Scalekit `identifier` == Cognee user; scopes recall to readable datasets; reports what is hidden; performs grants | Scalekit + Cognee |
 | **Mnemosyne** | hippocampus | discovers every system the user has connected (Scalekit connected accounts), pulls each through a known adapter or the generic read-only adapter, `remember()`s into that user's dataset with `node_set` provenance; records pulls to `sample_data/` | Scalekit → Cognee |
 | **Athena** | prefrontal cortex | `recall()`s scoped passages; synthesises a cited answer; says what it cannot see | Cognee + Respan |
@@ -69,6 +69,10 @@ python -m pantheon decide <id> approve|decline|revise --note "..."
 ## Actions
 
 Two paths. **Requested:** "open an issue for Marco" routes to Hephaestus, which drafts and executes as the user (dry-run unless `--execute`). **Proposed:** after every answer Hephaestus suggests up to two follow-ups (notify the waiting channel, file the follow-up issue, ask the dataset owner for access). Each is a proposal with an id. `decide <id> approve` executes it through Scalekit as the user; `decline` records it; `revise --note` redrafts and returns a new proposal. Every decision is remembered into the user's dataset (`source:pantheon kind:decision`), so the brain learns the person's preferences over time.
+
+## Model routing
+
+Closed-set decisions do not need a frontier model. With `PANTHEON_LOCAL=1`, Hermes routes **routing** and **judging** to a local small model through Ollama's OpenAI-compatible endpoint (`LOCAL_MODEL`, default `llama3.1:8b`; any tag works) and keeps **synthesis** on `claude-sonnet-4-5` and **drafts** on `claude-haiku-4-5` through the Respan gateway. If Ollama is unreachable (the hosted image, a laptop without it) the step falls back to its gateway model and the usage record says so. Measured on this repo's 18 routing questions: local vs gateway agreement 17/18 after normalisation, the one disagreement being the gateway's; judge agreement 15/15 on the after-grant answers. Every call, local or gateway, is recorded per step with provider, model and tokens; local calls cost nothing.
 
 ## Access story
 

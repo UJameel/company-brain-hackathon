@@ -55,7 +55,7 @@ def fact_check(scenario: dict, result: dict) -> dict:
 def judge(scenario: dict, result: dict) -> dict:
     prompt = (f"Question: {scenario['question']}\nMust contain: {scenario.get('must_mention', [])}\n"
               f"Must NOT contain: {scenario.get('must_not_mention', [])}\nCandidate answer:\n{result['answer']}")
-    raw = llm.complete("judge", JUDGE_SYSTEM, prompt, max_tokens=160)
+    raw = llm.complete("judge", JUDGE_SYSTEM, prompt, max_tokens=200, json_mode=True)
     try:
         j = json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
     except Exception:
@@ -99,7 +99,7 @@ async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user
                      "sources": result["sources"], "hidden": result["hidden"], "score": sc, "latency_s": round(time.time() - t, 1)})
         print(f"  {sc['final']:.2f}  {s['id']:<24} missing={sc['missing']} leaks={sc['leaks']} ungrounded={sc['ungrounded']}")
     mean = round(statistics.mean(r["score"]["final"] for r in rows), 3)
-    out = {"label": label, "stage": stage, "n": len(rows), "mean": mean, "models": llm.ROUTES, "rows": rows}
+    out = {"label": label, "stage": stage, "n": len(rows), "mean": mean, "models": {k: "/".join(llm.model_for(k)) for k in llm.ROUTES}, "rows": rows}
     (config.EVALS_DIR / f"results-{label}.json").write_text(json.dumps(out, indent=2))
     print(f"\n{label}: mean = {mean}  (n = {len(rows)})  -> evals/results-{label}.json")
     return out
@@ -120,6 +120,7 @@ def rescore(label: str, use_judge: bool = True, stage: str | None = None, as_lab
     out["mean"] = round(statistics.mean(r["score"]["final"] for r in out["rows"]), 3)
     out["rescored"] = True
     out["stage"] = stage
+    out["models"] = {**out.get("models", {}), "judge": "/".join(llm.model_for("judge"))}
     if as_label:
         out["label"] = as_label
         path = config.EVALS_DIR / f"results-{as_label}.json"

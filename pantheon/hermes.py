@@ -30,11 +30,18 @@ ROUTE_SYSTEM = """Classify the request for a company brain. Reply with JSON only
 
 @task(name="hermes.route")
 def route(question: str, usage: llm.Usage) -> dict:
-    raw = llm.complete("route", ROUTE_SYSTEM, question, usage=usage, max_tokens=80)
+    raw = llm.complete("route", ROUTE_SYSTEM, question, usage=usage, max_tokens=120, json_mode=True)
     try:
-        return json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
+        plan = json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
     except Exception:
         return {"intent": "question", "action_tool": None, "target_channel": None}
+    # Normalise: a tool only makes sense for an action; small models sometimes name one anyway.
+    if plan.get("intent") != "action":
+        plan["intent"] = "question"
+        plan["action_tool"] = None
+    elif plan.get("action_tool") not in ("slack_send_message", "github_issue_create"):
+        plan["action_tool"] = "slack_send_message"
+    return plan
 
 
 @task(name="cerberus.scope")
@@ -78,14 +85,14 @@ async def ask(user_key: str, question: str, dry_run: bool = True, suggest: bool 
     usage = llm.Usage()
     feed: list[str] = []
     plan = route(question, usage)
-    feed.append(f"Hermes routed: {plan['intent']} via {llm.ROUTES['route']}")
+    feed.append(f"Hermes routed: {plan['intent']} via {'/'.join(llm.model_for('route'))}")
     scope = await _scope(user_key)
     feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
     q = question
     if plan.get("intent") == "action":
         q = question + "\n\n(Hephaestus, the action agent, will perform the requested action right after you. Do not say you cannot act; give the facts and the person it concerns.)"
     result = await _answer(user_key, q, scope, usage)
-    feed.append(f"Athena: {result['passages']} passages from {result['sources']} via {llm.ROUTES['synthesize']}")
+    feed.append(f"Athena: {result['passages']} passages from {result['sources']} via {'/'.join(llm.model_for('synthesize'))}")
     action = None
     if plan.get("intent") == "action":
         action = _act(user_key, question, result["answer"], plan, usage, dry_run)

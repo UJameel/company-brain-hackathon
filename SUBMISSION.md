@@ -39,7 +39,7 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 ### Act + Evaluate — your agent(s) + Respan
 
 - Agents: Hermes (route + model per step), Cerberus (authorization), Mnemosyne (discover + ingest), Athena (answer), Hephaestus (act on request, propose follow-ups, execute on approval), Themis (evaluate), Morpheus (improve; remembers decisions)
-- LLM calls routed through the Respan gateway: all of them. Hermes routes `gpt-4o-mini` for routing, `claude-sonnet-4-5` for synthesis, `claude-haiku-4-5` for action drafts, `claude-haiku-4-5` (pinned) for the judge; Cognee's own extraction and embeddings also run through the gateway (`openai/gpt-4o-mini`, `openai/text-embedding-3-large`)
+- Model routing (slide criterion 4): Hermes picks the model per step. Text-writing steps go through the Respan gateway: `claude-sonnet-4-5` for synthesis, `claude-haiku-4-5` for action drafts. Closed-set decisions (routing, the Themis judge) run on a **local 8B model via Ollama** (`llama3.1:8b` on the demo machine; any tag) with automatic fallback to `gpt-4o-mini` / `claude-haiku-4-5` on the gateway when Ollama is unreachable, as in the hosted image. Agreement local vs gateway: router 17/18, judge 15/15. Cognee's extraction and embeddings run through the gateway (`openai/gpt-4o-mini`, `openai/text-embedding-3-large`). Usage is recorded per step with provider, model, tokens; the judge stays independent of the model Athena answers with either way.
 - Tracing: `respan-ai` SDK, `Respan()` at startup, `@workflow("pantheon.ask")` + `@task` per agent step; gateway calls auto-logged with model, tokens, cost
 - Scenario file: `evals/scenarios.json`, 15 scenarios (9 as Alice, 6 as Bob) with `must_mention`, `must_not_mention`, `expected_sources`, `expected_action`, and `after_grant` overrides for Bob
 - Evaluator: deterministic fact check (60%) + LLM judge on pinned `claude-haiku-4-5` returning structured booleans (40%); judge model ≠ answer model
@@ -54,6 +54,8 @@ Three runs, because a grant changes what *correct* means. All judged by the same
 | `before` | isolated | isolated: Bob must **not** see leadership facts | **0.99** | no leaks: Bob refuses correctly in every scenario |
 | `before-coverage` | isolated | full knowledge | **0.89** | how much of the team's questions Bob's brain covers before the share |
 | `after` | Alice shared `alice-brain` with Bob | full knowledge | **1.00** | the difference closes |
+
+Same stored answers re-judged by the local `llama3.1:8b` judge (`results-*-localjudge.json`): coverage before 0.877, after 1.00, isolation unchanged. Three of Bob's correct refusals move by ±0.2; no leak is scored differently.
 
 ### Baseline Run (`before-coverage`: isolated brain, full-knowledge expectations)
 
