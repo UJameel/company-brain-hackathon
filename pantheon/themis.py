@@ -105,20 +105,26 @@ async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user
     return out
 
 
-def rescore(label: str, use_judge: bool = True) -> dict:
+def rescore(label: str, use_judge: bool = True, stage: str | None = None, as_label: str | None = None) -> dict:
     """Re-score stored answers with the current scorer, without re-running the agent. Used so
-    before/after are judged by the same judge after the judge itself was fixed."""
+    before/after are judged by the same judge, and to score the same pre-grant answers against
+    full-knowledge expectations (stage="after-grant") to measure *coverage* before the share."""
     path = config.EVALS_DIR / f"results-{label}.json"
     out = json.loads(path.read_text())
-    scen = {s["id"]: s for s in load_scenarios(out.get("stage", "isolated"))}
+    stage = stage or out.get("stage", "isolated")
+    scen = {s["id"]: s for s in load_scenarios(stage)}
     for r in out["rows"]:
         result = {"answer": r["answer"], "sources": r["sources"], "action": r.get("action") or ({"tool": scen[r["id"]].get("expected_action")} if r["score"].get("action_ok") and scen[r["id"]].get("expected_action") else None)}
         r["score"] = score(scen[r["id"]], result, use_judge)
         print(f"  {r['score']['final']:.2f}  {r['id']:<24} missing={r['score']['missing']} leaks={r['score']['leaks']} ungrounded={r['score']['ungrounded']}")
     out["mean"] = round(statistics.mean(r["score"]["final"] for r in out["rows"]), 3)
     out["rescored"] = True
+    out["stage"] = stage
+    if as_label:
+        out["label"] = as_label
+        path = config.EVALS_DIR / f"results-{as_label}.json"
     path.write_text(json.dumps(out, indent=2))
-    print(f"\n{label}: mean = {out['mean']}  (n = {out['n']})  [rescored]")
+    print(f"\n{out['label']}: mean = {out['mean']}  (n = {out['n']})  [rescored, stage={stage}]")
     return out
 
 

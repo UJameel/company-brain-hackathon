@@ -4,6 +4,7 @@
       "owner": "alice",
       "sources": [
         "source:github",
+        "source:notion",
         "source:slack"
       ],
       "tags": [
@@ -13,11 +14,13 @@
         "kind:file",
         "kind:issue",
         "kind:pull_request",
+        "page:Atlas Launch Plan (Leadership only)",
         "repo:UJameel/northwind-atlas",
         "source:github",
+        "source:notion",
         "source:slack"
       ],
-      "documents": 7
+      "documents": 10
     },
     "bob-brain": {
       "owner": "bob",

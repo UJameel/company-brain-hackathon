@@ -11,7 +11,10 @@ from . import config  # noqa: F401  (sets ENABLE_BACKEND_ACCESS_CONTROL before c
 
 from cognee.modules.data.methods import get_authorized_existing_datasets
 from cognee.modules.users.methods import create_user, get_user_by_email
-from cognee.modules.users.permissions.methods import authorized_give_permission_on_datasets
+from cognee.modules.users.permissions.methods import (
+    authorized_give_permission_on_datasets,
+    authorized_revoke_permission_on_datasets,
+)
 
 
 _db_ready = False
@@ -83,3 +86,15 @@ async def grant(owner_key: str, grantee_key: str, dataset_name: str | None = Non
     state.setdefault("grants", []).append({"owner": owner_key, "grantee": grantee_key, "dataset": dataset_name, "permission": permission})
     config.save_state(state)
     return f"{owner_key} granted {permission} on {dataset_name} to {grantee_key}"
+
+
+async def revoke(owner_key: str, grantee_key: str, dataset_name: str | None = None, permission: str = "read") -> str:
+    owner = await get_or_create_user(owner_key)
+    grantee = await get_or_create_user(grantee_key)
+    dataset_name = dataset_name or config.dataset_for(owner_key)
+    (ds,) = await get_authorized_existing_datasets([dataset_name], "share", owner)
+    await authorized_revoke_permission_on_datasets(grantee.id, [ds.id], permission, owner.id)
+    state = config.load_state()
+    state["grants"] = [g for g in state.get("grants", []) if not (g["owner"] == owner_key and g["grantee"] == grantee_key and g["dataset"] == dataset_name)]
+    config.save_state(state)
+    return f"{owner_key} revoked {permission} on {dataset_name} from {grantee_key}"

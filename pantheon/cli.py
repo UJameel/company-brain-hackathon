@@ -28,6 +28,10 @@ def main() -> None:
     g.add_argument("--owner", choices=list(config.USERS), required=True)
     g.add_argument("--to", choices=list(config.USERS), required=True)
 
+    rv = sub.add_parser("revoke", help="Cerberus: owner revokes a share")
+    rv.add_argument("--owner", choices=list(config.USERS), required=True)
+    rv.add_argument("--to", choices=list(config.USERS), required=True)
+
     e = sub.add_parser("eval", help="Themis: run scenarios, score, write evals/results-<label>.json")
     e.add_argument("--label", required=True)
     e.add_argument("--no-judge", action="store_true")
@@ -36,6 +40,8 @@ def main() -> None:
 
     rs = sub.add_parser("rescore", help="Themis: re-score stored answers with the current scorer")
     rs.add_argument("--label", required=True)
+    rs.add_argument("--stage", choices=["isolated", "after-grant"], default=None, help="score against these expectations")
+    rs.add_argument("--as", dest="as_label", default=None, help="write to results-<as>.json instead")
 
     c = sub.add_parser("compare", help="Themis: before/after table")
     c.add_argument("before")
@@ -83,6 +89,10 @@ async def _run(args) -> None:
         from . import cerberus
 
         print(await cerberus.grant(args.owner, args.to))
+    elif args.cmd == "revoke":
+        from . import cerberus
+
+        print(await cerberus.revoke(args.owner, args.to))
     elif args.cmd == "eval":
         from . import themis
 
@@ -90,7 +100,7 @@ async def _run(args) -> None:
     elif args.cmd == "rescore":
         from . import themis
 
-        themis.rescore(args.label)
+        themis.rescore(args.label, stage=args.stage, as_label=args.as_label)
     elif args.cmd == "compare":
         from . import themis
 

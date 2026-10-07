@@ -72,7 +72,17 @@ python -m pantheon ask --user alice "Who owns the launch announcement? Draft the
 
 ## Evaluation
 
-`evals/scenarios.json`: 15 scenarios, 9 as Alice and 6 as Bob, with `must_mention`, `must_not_mention`, `expected_sources` (Cognee `node_set` tags) and `expected_action`. Themis scores each run 60% deterministic fact check + 40% LLM judge on a pinned `gpt-4o-mini` (Athena answers with `claude-sonnet-4-5`, so the judge is independent). Results land in `evals/results-<label>.json`; `compare` prints the table.
+`evals/scenarios.json`: 15 scenarios, 9 as Alice and 6 as Bob, with `must_mention`, `must_not_mention`, `expected_sources` (Cognee `node_set` tags) and `expected_action`. Four of Bob's scenarios carry an `after_grant` block: once Alice shares her dataset, Bob is *supposed* to see more, so the expectation flips.
+
+Themis scores each run 60% deterministic fact check + 40% LLM judge. The judge is `claude-haiku-4-5`, pinned, returning structured booleans; Athena answers with `claude-sonnet-4-5`, so the judge is independent. Results land in `evals/results-<label>.json`; `compare` prints the table; `rescore` re-scores stored answers so two runs are always judged by the same judge.
+
+Three numbers, because a grant changes what *correct* means:
+
+| run | brain state | expectations | what it proves |
+|---|---|---|---|
+| `before` | isolated | isolated (Bob must not see leadership facts) | **no leaks**: Bob refuses correctly |
+| `before-coverage` | isolated | full knowledge | how much of the team's questions Bob's brain can answer before the share |
+| `after` | Alice shared `alice-brain` with Bob | full knowledge | the difference closes |
 
 ## Memory design
 
