@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from . import config, llm
 
-ALLOWED_WRITES = {"slack_send_message", "githubpat_issue_create"}
+ALLOWED_WRITES = {"slack_send_message", "github_issue_create"}
 
 DRAFT_SYSTEM = """You are Hephaestus, the action agent of a company brain. Given the user's
 request and Athena's answer, produce ONLY the body of the message or issue to send, in

@@ -35,9 +35,16 @@ async def get_or_create_user(user_key: str):
 
 
 async def readable_datasets(user_key: str) -> list[str]:
+    return [name for name, _ in await readable_dataset_ids(user_key)]
+
+
+async def readable_dataset_ids(user_key: str) -> list[tuple[str, str]]:
+    """(name, id) for every dataset this user may read, owned or shared. Cognee resolves
+    dataset *names* only among datasets the caller owns, so shared datasets must be
+    addressed by id at recall time."""
     user = await get_or_create_user(user_key)
     datasets = await get_authorized_existing_datasets(None, "read", user)
-    return sorted(d.name for d in datasets)
+    return sorted((d.name, str(d.id)) for d in datasets)
 
 
 async def scope(user_key: str) -> dict:
@@ -45,7 +52,8 @@ async def scope(user_key: str) -> dict:
     and what exists that they may not."""
     state = config.load_state()
     known = state.get("datasets", {})  # dataset name -> {"owner": user_key, "sources": [...]}
-    readable = await readable_datasets(user_key)
+    pairs = await readable_dataset_ids(user_key)
+    readable = [n for n, _ in pairs]
     # A dataset is worth flagging as hidden only if it holds something (a channel, a repo,
     # a source) that none of the user's readable datasets hold. Alice is not told that
     # Bob's subset of her own knowledge is "hidden" from her.
@@ -59,7 +67,8 @@ async def scope(user_key: str) -> dict:
         extra = sorted(set(meta.get("tags", [])) - have)
         if extra:
             hidden[name] = {**meta, "extra": extra}
-    return {"user": user_key, "identifier": config.USERS[user_key], "readable": readable, "hidden": hidden}
+    return {"user": user_key, "identifier": config.USERS[user_key], "readable": readable,
+            "readable_ids": [i for _, i in pairs], "hidden": hidden}
 
 
 async def grant(owner_key: str, grantee_key: str, dataset_name: str | None = None, permission: str = "read") -> str:

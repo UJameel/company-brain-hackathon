@@ -26,6 +26,7 @@ def dataset_for(user_key: str) -> str:
     return f"{user_key}-brain"
 
 
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "UJameel/northwind-atlas")
 SLACK_CONNECTION = os.environ.get("SLACK_CONNECTION_NAME", "slack")
 GITHUB_CONNECTION = os.environ.get("GITHUB_CONNECTION_NAME", "github-connect")
 NOTION_CONNECTION = os.environ.get("NOTION_CONNECTION_NAME", "notion")

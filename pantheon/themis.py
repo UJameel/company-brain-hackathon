@@ -12,12 +12,16 @@ import time
 
 from . import config, llm, hermes
 
-JUDGE_SYSTEM = """You are an impartial evaluator. Given a question, the facts a correct answer must
-contain, facts it must NOT contain, and the candidate answer, reply with JSON only:
-{"score": <0.0-1.0>, "reason": "<one sentence>"}. Score 1.0 if every required fact is present
-and no forbidden fact appears. Extra detail that is consistent with the required facts (a year on
-a date, a source citation, an added caveat) is fine and must not be penalised. Penalise only facts
-that contradict the required ones, invented specifics, or a forbidden fact appearing."""
+JUDGE_SYSTEM = """You are an impartial evaluator for a company-brain agent. You see a question, the
+facts a correct answer must contain, facts it must NOT contain, and the candidate answer.
+Reply with JSON only:
+{"required_present": true|false,   // every required fact is stated (paraphrase and extra precision are fine)
+ "forbidden_present": true|false,  // any forbidden fact appears
+ "contradiction": true|false,      // the answer states something that contradicts a required fact
+ "reason": "<one sentence>"}
+You do not see the source documents, so never call extra detail "invented": only flag a contradiction.
+A required fact counts as present when the answer states it in any equivalent form: "October 21"
+is present in "October 21, 2026"; "$59" is present in "$59 per month"; "#3" is present in "PR #3"."""
 
 
 def fact_check(scenario: dict, result: dict) -> dict:
@@ -51,11 +55,19 @@ def fact_check(scenario: dict, result: dict) -> dict:
 def judge(scenario: dict, result: dict) -> dict:
     prompt = (f"Question: {scenario['question']}\nMust contain: {scenario.get('must_mention', [])}\n"
               f"Must NOT contain: {scenario.get('must_not_mention', [])}\nCandidate answer:\n{result['answer']}")
-    raw = llm.complete("judge", JUDGE_SYSTEM, prompt, max_tokens=120)
+    raw = llm.complete("judge", JUDGE_SYSTEM, prompt, max_tokens=160)
     try:
-        return json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
+        j = json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
     except Exception:
         return {"score": 0.0, "reason": "judge returned unparseable output"}
+    score = 1.0
+    if not j.get("required_present", False):
+        score -= 0.5
+    if j.get("forbidden_present", False):
+        score -= 0.5
+    if j.get("contradiction", False):
+        score -= 0.5
+    return {"score": max(score, 0.0), **j}
 
 
 def score(scenario: dict, result: dict, use_judge: bool = True) -> dict:
@@ -65,8 +77,17 @@ def score(scenario: dict, result: dict, use_judge: bool = True) -> dict:
     return {"final": final, **fc, "judge": j}
 
 
-async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user: str | None = None) -> dict:
+def load_scenarios(stage: str = "isolated", scenarios_path=None) -> list[dict]:
+    """stage="isolated": expectations as written. stage="after-grant": apply each scenario's
+    `after_grant` override, because once Alice shares her dataset Bob is *supposed* to see more."""
     scenarios = json.loads((scenarios_path or config.EVALS_DIR / "scenarios.json").read_text())
+    if stage == "after-grant":
+        scenarios = [{**s, **{k: v for k, v in (s.get("after_grant") or {}).items() if k != "note"}} for s in scenarios]
+    return scenarios
+
+
+async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user: str | None = None, stage: str = "isolated") -> dict:
+    scenarios = load_scenarios(stage, scenarios_path)
     if only_user:
         scenarios = [s for s in scenarios if s["as_user"] == only_user]
     rows = []
@@ -78,9 +99,26 @@ async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user
                      "sources": result["sources"], "hidden": result["hidden"], "score": sc, "latency_s": round(time.time() - t, 1)})
         print(f"  {sc['final']:.2f}  {s['id']:<24} missing={sc['missing']} leaks={sc['leaks']} ungrounded={sc['ungrounded']}")
     mean = round(statistics.mean(r["score"]["final"] for r in rows), 3)
-    out = {"label": label, "n": len(rows), "mean": mean, "models": llm.ROUTES, "rows": rows}
+    out = {"label": label, "stage": stage, "n": len(rows), "mean": mean, "models": llm.ROUTES, "rows": rows}
     (config.EVALS_DIR / f"results-{label}.json").write_text(json.dumps(out, indent=2))
     print(f"\n{label}: mean = {mean}  (n = {len(rows)})  -> evals/results-{label}.json")
+    return out
+
+
+def rescore(label: str, use_judge: bool = True) -> dict:
+    """Re-score stored answers with the current scorer, without re-running the agent. Used so
+    before/after are judged by the same judge after the judge itself was fixed."""
+    path = config.EVALS_DIR / f"results-{label}.json"
+    out = json.loads(path.read_text())
+    scen = {s["id"]: s for s in load_scenarios(out.get("stage", "isolated"))}
+    for r in out["rows"]:
+        result = {"answer": r["answer"], "sources": r["sources"], "action": r.get("action") or ({"tool": scen[r["id"]].get("expected_action")} if r["score"].get("action_ok") and scen[r["id"]].get("expected_action") else None)}
+        r["score"] = score(scen[r["id"]], result, use_judge)
+        print(f"  {r['score']['final']:.2f}  {r['id']:<24} missing={r['score']['missing']} leaks={r['score']['leaks']} ungrounded={r['score']['ungrounded']}")
+    out["mean"] = round(statistics.mean(r["score"]["final"] for r in out["rows"]), 3)
+    out["rescored"] = True
+    path.write_text(json.dumps(out, indent=2))
+    print(f"\n{label}: mean = {out['mean']}  (n = {out['n']})  [rescored]")
     return out
 
 

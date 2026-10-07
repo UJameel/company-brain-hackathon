@@ -32,6 +32,10 @@ def main() -> None:
     e.add_argument("--label", required=True)
     e.add_argument("--no-judge", action="store_true")
     e.add_argument("--only-user", choices=list(config.USERS))
+    e.add_argument("--stage", choices=["isolated", "after-grant"], default="isolated")
+
+    rs = sub.add_parser("rescore", help="Themis: re-score stored answers with the current scorer")
+    rs.add_argument("--label", required=True)
 
     c = sub.add_parser("compare", help="Themis: before/after table")
     c.add_argument("before")
@@ -82,7 +86,11 @@ async def _run(args) -> None:
     elif args.cmd == "eval":
         from . import themis
 
-        await themis.run(args.label, use_judge=not args.no_judge, only_user=args.only_user)
+        await themis.run(args.label, use_judge=not args.no_judge, only_user=args.only_user, stage=args.stage)
+    elif args.cmd == "rescore":
+        from . import themis
+
+        themis.rescore(args.label)
     elif args.cmd == "compare":
         from . import themis
 

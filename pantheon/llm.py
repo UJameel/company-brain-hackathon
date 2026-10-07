@@ -15,7 +15,7 @@ ROUTES: dict[str, str] = {
     "tag": "gpt-4o-mini",            # provenance tagging helpers
     "synthesize": "claude-sonnet-4-5",  # the answer the user reads
     "draft": "claude-haiku-4-5",     # action payloads (Slack message, issue body)
-    "judge": "gpt-4o-mini",          # Themis: pinned, independent of the agent's model
+    "judge": "claude-haiku-4-5",     # Themis: pinned, independent of the model Athena answers with
 }
 
 

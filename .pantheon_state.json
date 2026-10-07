@@ -32,5 +32,12 @@
       "documents": 2
     }
   },
-  "grants": []
+  "grants": [
+    {
+      "owner": "alice",
+      "grantee": "bob",
+      "dataset": "alice-brain",
+      "permission": "read"
+    }
+  ]
 }

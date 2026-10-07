@@ -23,9 +23,9 @@ except Exception:  # tracing is optional; the brain still works
 
 
 ROUTE_SYSTEM = """Classify the request for a company brain. Reply with JSON only:
-{"intent": "question" | "action", "action_tool": null | "slack_send_message" | "githubpat_issue_create",
- "target_channel": null | "#channel-name"}.
-"action" means the user asks to send, post, draft a message, or open an issue."""
+{"intent": "question" | "action", "action_tool": null | "slack_send_message" | "github_issue_create",
+ "target_channel": null | "#channel-name", "title": null | "<short issue title if opening an issue>"}.
+"action" means the user asks to send, post, draft a message, or open/file an issue or ticket."""
 
 
 @task(name="hermes.route")
@@ -55,7 +55,9 @@ def _act(user_key: str, question: str, answer: str, plan: dict, usage: llm.Usage
         tool_input = {"channel": plan.get("target_channel") or "#general", "text": body}
         conn = config.SLACK_CONNECTION
     else:
-        tool_input = {"owner": "northwind", "repo": "atlas", "title": body[:80], "body": body}
+        owner, repo = config.GITHUB_REPO.split("/")
+        title = plan.get("title") or body.split(".")[0][:80]
+        tool_input = {"owner": owner, "repo": repo, "title": title, "body": body + "\n\n_Opened by Pantheon (Hephaestus) on behalf of the requesting user via Scalekit._"}
         conn = config.GITHUB_CONNECTION
     return hephaestus.act(user_key, tool, tool_input, conn, dry_run)
 
@@ -69,7 +71,10 @@ async def ask(user_key: str, question: str, dry_run: bool = True) -> dict:
     feed.append(f"Hermes routed: {plan['intent']} via {llm.ROUTES['route']}")
     scope = await _scope(user_key)
     feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
-    result = await _answer(user_key, question, scope, usage)
+    q = question
+    if plan.get("intent") == "action":
+        q = question + "\n\n(Hephaestus, the action agent, will perform the requested action right after you. Do not say you cannot act; give the facts and the person it concerns.)"
+    result = await _answer(user_key, q, scope, usage)
     feed.append(f"Athena: {result['passages']} passages from {result['sources']} via {llm.ROUTES['synthesize']}")
     action = None
     if plan.get("intent") == "action":
