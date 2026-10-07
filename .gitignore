@@ -14,3 +14,4 @@ cognee-feedback.md
 .cognee-feedback.state
 .tools-cache.json
 *.live.json
+.pantheon_state.json

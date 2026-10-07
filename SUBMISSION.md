@@ -10,7 +10,7 @@
 
 Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. It pulls Slack and GitHub *as each employee* through Scalekit, remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Bob what exists that he cannot see and who owns it; Alice grants access live; Bob's answer changes; the eval shows before and after.
 
-- Data sources connected through Scalekit (≥ 2 apps): Slack (`slack`), GitHub (`github-connect`), Notion (`notion`, connection authorized; page sharing pending at submission time)
+- Data sources connected through Scalekit (≥ 2 apps): Slack (`slack`), GitHub (`github-connect`), Notion (`notion`, live: the leadership launch-plan page)
 - Primary use case / team workflow: launch-readiness Q&A and triage for an engineering team, with write-back (open the follow-up issue)
 - Users in the demo and how their access differs: Alice = Slack (#general, #engineering, private #leadership) + GitHub; Bob = Slack public channels only, no GitHub connection
 - What makes it stand out: authorization is a named agent (Cerberus) and is enforced twice, at pull (Scalekit per-user tokens) and at recall (Cognee per-user datasets, by id); every step is a named brain region in the Respan trace; the eval re-scores stored answers so before/after are judged by the same judge
@@ -47,12 +47,20 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 
 ## Evaluation Evidence
 
-### Baseline Run (isolated: Bob reads only his own dataset)
+Three runs, because a grant changes what *correct* means. All judged by the same pinned judge (`pantheon rescore`).
+
+| run | brain state | expectations | mean (n=15) | proves |
+|---|---|---|---|---|
+| `before` | isolated | isolated: Bob must **not** see leadership facts | **0.99** | no leaks: Bob refuses correctly in every scenario |
+| `before-coverage` | isolated | full knowledge | **0.89** | how much of the team's questions Bob's brain covers before the share |
+| `after` | Alice shared `alice-brain` with Bob | full knowledge | **1.00** | the difference closes |
+
+### Baseline Run (`before-coverage`: isolated brain, full-knowledge expectations)
 
 - Respan trace / eval run link: platform.respan.ai → Observability → Logs, workflow `pantheon.ask` (filter by time)
 - Scenarios run: 15
-- Mean score: __BEFORE_MEAN__
-- Worst scenario and why it failed: `pr42-blocker-bob` — Bob's answer is correct from Slack but cannot be grounded in GitHub (`expected_sources` includes `source:github`, which he has no connection to); `pro-price-bob` — correctly declines to state the new price
+- Mean score: 0.89
+- Worst scenarios and why they failed: `launch-risk-bob`, `pro-price-bob`, `hiring-bob` (0.50 each) — Bob cannot see #leadership, so he correctly does not state the slip date, the $59 price or the hiring freeze; `pr42-blocker-bob` (0.85) — correct from Slack but not grounded in GitHub, which he has no connection to. These are the access boundary showing up in the score.
 
 ```text
 question: What is blocking PR #3, who owns it, and which issue tracks the blocker?   (as bob)
@@ -64,12 +72,12 @@ score:    0.85
 ### Improved Run (after the grant)
 
 - Respan trace / eval run link: same view, later timestamp
-- What changed: Alice ran `pantheon grant --owner alice --to bob` (Cognee `authorized_give_permission_on_datasets`, read). Nothing else.
-- Mean score: __AFTER_MEAN__
+- What changed: Alice ran `pantheon grant --owner alice --to bob` (Cognee `authorized_give_permission_on_datasets`, read), and the Notion launch-plan page was added to `alice-brain` as a live third source.
+- Mean score: 1.00
 
 ```text
-Before:  mean = __BEFORE_MEAN__   (n = 15 scenarios)
-After:   mean = __AFTER_MEAN__   (n = 15 scenarios)
+Before:  mean = 0.89   (n = 15 scenarios)
+After:   mean = 1.00   (n = 15 scenarios)
 ```
 
 ## Access Story

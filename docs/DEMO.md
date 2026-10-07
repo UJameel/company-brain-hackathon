@@ -40,7 +40,7 @@ GitHub tab: refresh, the issue is there, opened under Alice's account. "Hephaest
 ```
 python -m pantheon compare before-coverage after
 ```
-"Fifteen scenarios, independent judge on a different model, every run traced. Isolation run: no leaks. Coverage before the share 0.89, after 0.99. The grant is the change, and the eval saw it."
+"Fifteen scenarios, independent judge on a different model, every run traced. Isolation run: no leaks. Isolation run 0.99 with zero leaks. Coverage before the share 0.89, after 1.00. The grant is the change, and the eval saw it."
 
 **2:50 — Close (10s)**
 "Seven agents, named after brain regions, so the architecture reads in one glance. This is what it looks like when a company has a brain, and the brain knows who it's talking to."
