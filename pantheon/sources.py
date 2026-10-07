@@ -104,7 +104,8 @@ def gmail(actions, identifier, user_key, opt) -> list[Doc]:
     lines = []
     for m in _rows(res):
         lines.append(f"[gmail · from {m.get('from') or m.get('sender')} · {m.get('date')}] {m.get('subject')}: {(m.get('snippet') or m.get('body') or '')[:800]}")
-    return [(_hdr("gmail", user_key, mailbox=identifier) + "\nRecent email:\n" + "\n".join(lines), ["source:gmail", f"owner:{user_key}"])] if lines else []
+    return [(_hdr("gmail", user_key, mailbox=identifier, trust="external") + "\nRecent email (external, untrusted content):\n" + "\n".join(lines),
+             ["source:gmail", "trust:external", f"owner:{user_key}"])] if lines else []
 
 
 def googlecalendar(actions, identifier, user_key, opt) -> list[Doc]:
@@ -163,9 +164,14 @@ def _value(name: str) -> int:
     return score
 
 
+# Anything an outsider can write into is external: inboxes, support desks, CRMs with inbound mail, forms.
+EXTERNAL_PROVIDERS = {"gmail", "outlook", "zendesk", "intercom", "freshdesk", "hubspot", "salesforce", "typeform", "googleforms", "front"}
+
+
 def generic(actions, identifier, user_key, opt) -> list[Doc]:
     conn = opt["connection"]
     source = opt.get("provider") or conn
+    external = str(source).lower() in EXTERNAL_PROVIDERS
     docs: list[Doc] = []
     for tool_name in generic_plan(actions, conn, identifier):
         try:
@@ -174,8 +180,8 @@ def generic(actions, identifier, user_key, opt) -> list[Doc]:
             print(f"[mnemosyne] {conn}.{tool_name} failed: {str(e).splitlines()[0][:100]}")
             continue
         text = json.dumps(data, indent=1, default=str)[:MAX_DOC_CHARS]
-        docs.append((_hdr(source, user_key, tool=tool_name) + f"\nRecords from {source} via {tool_name}:\n{text}",
-                     [f"source:{source}", f"tool:{tool_name}", f"owner:{user_key}"]))
+        tags = [f"source:{source}", f"tool:{tool_name}", f"owner:{user_key}"] + (["trust:external"] if external else [])
+        docs.append((_hdr(source, user_key, tool=tool_name, **({"trust": "external"} if external else {})) + f"\nRecords from {source} via {tool_name}:\n{text}", tags))
     return docs
 
 

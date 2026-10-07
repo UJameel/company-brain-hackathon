@@ -44,6 +44,7 @@ def main() -> None:
     e.add_argument("--no-judge", action="store_true")
     e.add_argument("--only-user", choices=list(config.USERS))
     e.add_argument("--stage", choices=["isolated", "after-grant"], default="isolated")
+    e.add_argument("--ids", default=None, help="comma-separated scenario ids to run")
 
     rs = sub.add_parser("rescore", help="Themis: re-score stored answers with the current scorer")
     rs.add_argument("--label", required=True)
@@ -134,7 +135,7 @@ async def _run(args) -> None:
     elif args.cmd == "eval":
         from . import themis
 
-        await themis.run(args.label, use_judge=not args.no_judge, only_user=args.only_user, stage=args.stage)
+        await themis.run(args.label, use_judge=not args.no_judge, only_user=args.only_user, stage=args.stage, ids=args.ids.split(",") if args.ids else None)
     elif args.cmd == "rescore":
         from . import themis
 

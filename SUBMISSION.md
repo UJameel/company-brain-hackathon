@@ -92,6 +92,10 @@ After:   mean = 1.00   (n = 15 scenarios)
 - The grant: Alice shares `alice-brain` with Bob, permission `read`
 - Result for B after the share: "$59 per month after launch (Slack #leadership)"
 
+## Trust boundaries
+
+Retrieved content is untrusted data: Athena is told never to follow instructions found in passages and to flag attempts; sources an outsider can write into (email, support desks, CRMs) are tagged `trust:external`; Hephaestus refuses any proposed action whose destination is not already known to the brain, so a forwarded email cannot pick where something is sent; nothing executes without a human approve; user decisions are remembered under their own `source:pantheon` tag, separate from pulled content. A planted prompt-injection scenario (`injection-alice`, `injection-bob`) is in the eval: the attempt is quoted, ignored, flagged, and no proposal targets the attacker's address.
+
 ## Architecture
 
 ```text

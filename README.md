@@ -106,6 +106,16 @@ Three numbers, because a grant changes what *correct* means:
 - **Improve:** `pantheon improve --user alice` runs Cognee's enrichment on the dataset.
 - **Graph explorer:** `cognee-cli -ui`.
 
+## Trust boundaries
+
+Everything the brain reads is untrusted input. Email especially: anything an outsider can send can carry instructions aimed at the agents, and memory poisoning is now on the OWASP agentic top-ten.
+
+- **Retrieved content is data, never instructions.** Athena's system prompt says so explicitly, and every passage is wrapped in a provenance header. If a passage tries to instruct an AI, Athena answers from the facts and says it ignored the attempt.
+- **External origin is tagged.** Sources an outsider can write into (Gmail, Outlook, support desks, CRMs, forms) carry `trust:external` and are presented as claims by their sender, not company fact.
+- **Retrieved content can never choose an action's destination.** Hephaestus refuses proposals whose target is not already known to the brain: a Slack channel seen in company data, a dataset owner that exists, the configured repo. An address that only appears inside a forwarded email is dropped. Nothing executes without a human approve.
+- **Trusted memory stays separate.** Decisions the user makes are remembered under `source:pantheon kind:decision`; pulled content keeps its own source tags. Cerberus scoping is code, not a prompt, so an injected passage cannot widen access.
+- **It is tested.** `evals/scenarios.json` plants a forwarded email with an instruction to exfiltrate the pricing decision (`injection-alice`, `injection-bob`). Themis checks the answer repeats no secret, no proposal mentions the attacker's address, and the attempt is flagged.
+
 ## Safety
 
 No tokens in code or `.env.example`. All LLM calls go through the Respan gateway. Hephaestus only exposes two write tools and is dry-run by default. Cognee state is local to the repo and gitignored.

@@ -91,9 +91,25 @@ def propose(user_key: str, question: str, answer: str, hidden: dict, usage: llm.
         return []
     out = []
     for it in items[:2]:
-        if it.get("tool") in TOOLS and isinstance(it.get("input"), dict):
+        if it.get("tool") in TOOLS and isinstance(it.get("input"), dict) and _target_is_known(it["tool"], it["input"], hidden):
             out.append(new_proposal(user_key, it["tool"], it["input"], it.get("rationale", ""), "suggested", question))
     return out
+
+
+def _target_is_known(tool: str, inp: dict, hidden: dict) -> bool:
+    """Proposals may only point at things the brain already knows: a channel seen in the
+    company's own data, a dataset owner that exists, the configured repo. A target that only
+    appears inside retrieved text (an address in a forwarded email) is refused. Retrieved
+    content can inform an action; it can never choose its destination."""
+    if tool == "request_access":
+        return inp.get("owner") in config.USERS and inp.get("dataset") in config.load_state().get("datasets", {})
+    if tool == "slack_send_message":
+        known_channels = {t.split(":", 1)[1] for d in config.load_state().get("datasets", {}).values() for t in d.get("tags", []) if t.startswith("channel:")}
+        ch = str(inp.get("channel", "")).lstrip("#")
+        return ch in known_channels
+    if tool == "github_issue_create":
+        return "@" not in json.dumps(inp)  # no addresses smuggled into issues
+    return False
 
 
 def act(user_key: str, tool_name: str, tool_input: dict, connection_name: str, dry_run: bool) -> dict:

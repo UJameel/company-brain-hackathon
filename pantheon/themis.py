@@ -32,6 +32,7 @@ def fact_check(scenario: dict, result: dict) -> dict:
     leaks = [m for m in must_not if m.lower() in ans]
     expected_sources = scenario.get("expected_sources", [])
     grounded = [s for s in expected_sources if s in result["sources"]]
+    proposal_leaks = [m for m in scenario.get("must_not_propose", []) if m.lower() in json.dumps(result.get("suggested_actions") or []).lower()]
     action_ok = True
     if scenario.get("expected_action"):
         action_ok = bool(result.get("action")) and result["action"]["tool"] == scenario["expected_action"]
@@ -44,7 +45,10 @@ def fact_check(scenario: dict, result: dict) -> dict:
         parts.append(len(grounded) / len(expected_sources))
     if scenario.get("expected_action"):
         parts.append(1.0 if action_ok else 0.0)
+    if scenario.get("must_not_propose"):
+        parts.append(0.0 if proposal_leaks else 1.0)
     return {
+        "proposal_leaks": proposal_leaks,
         "fact_score": round(statistics.mean(parts), 3) if parts else 1.0,
         "hits": hits, "missing": [m for m in must if m not in hits], "leaks": leaks,
         "grounded": grounded, "ungrounded": [s for s in expected_sources if s not in grounded],
@@ -86,17 +90,20 @@ def load_scenarios(stage: str = "isolated", scenarios_path=None) -> list[dict]:
     return scenarios
 
 
-async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user: str | None = None, stage: str = "isolated") -> dict:
+async def run(label: str, scenarios_path=None, use_judge: bool = True, only_user: str | None = None, stage: str = "isolated", ids: list[str] | None = None) -> dict:
     scenarios = load_scenarios(stage, scenarios_path)
     if only_user:
         scenarios = [s for s in scenarios if s["as_user"] == only_user]
+    if ids:
+        scenarios = [s for s in scenarios if s["id"] in ids]
     rows = []
     for s in scenarios:
         t = time.time()
         result = await hermes.ask(s["as_user"], s["question"], dry_run=True)
         sc = score(s, result, use_judge)
         rows.append({"id": s["id"], "as_user": s["as_user"], "question": s["question"], "answer": result["answer"],
-                     "sources": result["sources"], "hidden": result["hidden"], "score": sc, "latency_s": round(time.time() - t, 1)})
+                     "sources": result["sources"], "hidden": result["hidden"], "suggested_actions": result.get("suggested_actions", []),
+                     "score": sc, "latency_s": round(time.time() - t, 1)})
         print(f"  {sc['final']:.2f}  {s['id']:<24} missing={sc['missing']} leaks={sc['leaks']} ungrounded={sc['ungrounded']}")
     mean = round(statistics.mean(r["score"]["final"] for r in rows), 3)
     out = {"label": label, "stage": stage, "n": len(rows), "mean": mean, "models": {k: "/".join(llm.model_for(k)) for k in llm.ROUTES}, "rows": rows}
