@@ -1,0 +1,106 @@
+import asyncio
+
+import pytest
+
+from api import pipeline
+
+
+async def collect(user="bob", question="What will the Pro plan cost after the Atlas launch?", dry_run=True):
+    events = []
+    async for name, data in pipeline.run(user, question, dry_run):
+        events.append((name, data))
+    return events
+
+
+@pytest.fixture
+def fake_backend(monkeypatch):
+    """Stub every pantheon call the pipeline makes. Records the usage rows the way llm.Usage does."""
+    def route(question, usage):
+        usage.calls.append({"step": "route", "model": "gpt-4o-mini", "prompt_tokens": 100, "completion_tokens": 10})
+        return {"intent": "action" if "draft" in question.lower() else "question", "action_tool": "slack_send_message", "target_channel": "#general"}
+
+    async def scope(user_key):
+        return {"user": user_key, "identifier": f"{user_key}@northwind.dev", "readable": [f"{user_key}-brain"],
+                "readable_ids": ["00000000-0000-0000-0000-000000000001"],
+                "hidden": {"alice-brain": {"owner": "alice", "extra": ["channel:leadership"]}} if user_key == "bob" else {}}
+
+    async def recall(user_key, question, readable_ids):
+        return ["[source:slack channel:#general pulled-as:bob] Pro is $49."]
+
+    async def stream(prompt, usage):
+        for piece in ["The Pro plan ", "costs $49 ", "(Slack #general)."]:
+            yield piece
+        usage.calls.append({"step": "synthesize", "model": "claude-sonnet-4-5", "prompt_tokens": 800, "completion_tokens": 40})
+
+    def act(user_key, question, answer, plan, usage, dry_run):
+        usage.calls.append({"step": "draft", "model": "claude-haiku-4-5", "prompt_tokens": 50, "completion_tokens": 20})
+        return {"tool": plan["action_tool"], "status": "dry-run", "as_user": f"{user_key}@northwind.dev", "input": {"channel": "#general", "text": "hi"}}
+
+    monkeypatch.setattr(pipeline.hermes, "route", route)
+    monkeypatch.setattr(pipeline.hermes, "_scope", scope)
+    monkeypatch.setattr(pipeline.athena, "recall", recall)
+    monkeypatch.setattr(pipeline, "stream_synthesize", stream)
+    monkeypatch.setattr(pipeline.hermes, "_act", act)
+
+    def propose(user_key, question, answer, hidden, usage):
+        return [{"id": "a1", "user": user_key, "as_user": f"{user_key}@northwind.dev", "tool": "request_access", "input": {"owner": "alice", "dataset": "alice-brain"},
+                 "rationale": "alice-brain holds the leadership channel", "origin": "suggested", "status": "proposed", "parent": None, "created_at": "2026-10-07T23:00:00Z"}] if hidden else []
+
+    monkeypatch.setattr(pipeline.hephaestus, "propose", propose)
+    monkeypatch.setattr(pipeline, "granted_to", lambda user_key: False)
+    monkeypatch.setattr(pipeline, "SCENARIOS", [
+        {"id": "pro-price-bob", "as_user": "bob", "question": "What will the Pro plan cost after the Atlas launch?",
+         "must_mention": ["$49"], "must_not_mention": ["$59"], "expected_sources": ["source:slack"]},
+    ])
+
+
+def test_event_order_and_done_payload(fake_backend):
+    events = asyncio.run(collect())
+    names = [n for n, _ in events]
+    assert names[:3] == ["hermes", "cerberus", "athena.recall"]
+    assert names.count("athena.token") == 3
+    assert names[-3:] == ["hephaestus.proposed", "themis", "done"]
+    assert "hephaestus" not in names
+    done = events[-1][1]
+    assert done["suggested_actions"][0]["tool"] == "request_access"
+    assert done["feed"][-1].startswith("Hephaestus proposed: request_access [a1]")
+    assert done["answer"] == "The Pro plan costs $49 (Slack #general)."
+    assert done["sources"] == ["source:slack"]
+    assert done["hidden"] == ["alice-brain"]
+    assert done["action"] is None
+    assert [u["step"] for u in done["usage"]] == ["route", "synthesize"]
+    assert done["cost_usd"] == round(100 * 0.15 / 1e6 + 10 * 0.60 / 1e6 + 800 * 3 / 1e6 + 40 * 15 / 1e6, 6)
+    assert done["themis"]["fact_score"] == 1.0 and done["themis"]["scenario_id"] == "pro-price-bob"
+    assert len(done["feed"]) == 4 and done["feed"][0].startswith("Hermes routed: question")
+
+
+def test_action_intent_emits_hephaestus(fake_backend):
+    events = asyncio.run(collect(user="alice", question="Draft a Slack message to Priya about the blog post."))
+    names = [n for n, _ in events]
+    assert "hephaestus" in names and names.index("hephaestus") > names.index("athena.recall")
+    done = events[-1][1]
+    assert done["action"]["status"] == "dry-run" and done["action"]["as_user"] == "alice@northwind.dev"
+    assert done["themis"] is None
+    assert done["suggested_actions"] == []  # alice has nothing hidden, the stub proposes nothing
+    assert done["feed"][-1].startswith("Hephaestus: slack_send_message dry-run as alice@northwind.dev")
+
+
+def test_stream_failure_falls_back_to_single_completion(fake_backend, monkeypatch):
+    async def broken(prompt, usage):
+        yield "The Pro "
+        raise RuntimeError("gateway closed")
+
+    monkeypatch.setattr(pipeline, "stream_synthesize", broken)
+    monkeypatch.setattr(pipeline.llm, "complete", lambda step, system, user, usage=None, max_tokens=700: "The Pro plan costs $49.")
+    events = asyncio.run(collect())
+    done = events[-1][1]
+    assert done["answer"] == "The Pro plan costs $49."
+    assert events[-1][0] == "done"
+
+
+def test_build_prompt_mirrors_athena():
+    scope = {"identifier": "bob@northwind.dev", "hidden": {"alice-brain": {"owner": "alice", "extra": ["channel:leadership"]}}}
+    p = pipeline.build_prompt("bob", "Q?", scope, ["[source:slack pulled-as:bob] hello"])
+    assert "User: bob (bob@northwind.dev)" in p
+    assert "pulled-as" not in p
+    assert "HIDDEN (exists, not readable by this user):" in p and "alice-brain (owner: alice, contains: channel:leadership)" in p
