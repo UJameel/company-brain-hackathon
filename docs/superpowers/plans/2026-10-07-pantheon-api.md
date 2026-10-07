@@ -685,25 +685,33 @@ def test_actions_list_and_decide(client, monkeypatch):
 
 
 def test_same_user_chats_are_serialised(client, monkeypatch):
+    """Driven at the handler level with asyncio.gather; TestClient cannot interleave two
+    blocking calls that share an asyncio.Lock (it deadlocks)."""
+    import asyncio
+
     order = []
 
     async def slow_run(user, question, dry_run=True):
         order.append(f"start:{question}")
-        import asyncio
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.1)
         order.append(f"end:{question}")
         yield "done", {"answer": question}
 
     monkeypatch.setattr(server.pipeline, "run", slow_run)
-    results = {}
 
-    def go(q):
-        results[q] = client.post("/chat", json={"user": "bob", "question": q}).status_code
+    async def drain(q):
+        resp = await server.chat(server.AskBody(user="bob", question=q))
+        return [chunk async for chunk in resp.body_iterator]
 
-    a = threading.Thread(target=go, args=("one",)); b = threading.Thread(target=go, args=("two",))
-    a.start(); time.sleep(0.05); b.start(); a.join(); b.join()
-    assert results == {"one": 200, "two": 200}
-    assert order[:2] == ["start:one", "end:one"]
+    async def main():
+        a = asyncio.create_task(drain("one"))
+        await asyncio.sleep(0.02)
+        b = asyncio.create_task(drain("two"))
+        return await asyncio.gather(a, b)
+
+    out = asyncio.run(main())
+    assert all(any("event: done" in c for c in chunks) for chunks in out)
+    assert order == ["start:one", "end:one", "start:two", "end:two"]
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
