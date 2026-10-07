@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PROJECT_DIR:-.}/.agents/skills/cognee-hackathon-feedback/hook.sh\"",
+            "timeout": 10,
+            "statusMessage": "cognee feedback checkpoint"
+          }
+        ]
+      }
+    ]
+  }
+}
