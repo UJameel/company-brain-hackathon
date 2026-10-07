@@ -8,8 +8,13 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
-# Cognee reads this at import time; it must be set before `import cognee` anywhere.
+# Cognee reads these at import time; they must be set before `import cognee` anywhere.
 os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "true")
+for _var, _sub in (("SYSTEM_ROOT_DIRECTORY", ".cognee_system"), ("DATA_ROOT_DIRECTORY", ".data_storage")):
+    _dir = Path(os.environ.get(_var) or (ROOT / _sub))
+    (_dir / "databases" if _var == "SYSTEM_ROOT_DIRECTORY" else _dir).mkdir(parents=True, exist_ok=True)
+    os.environ[_var] = str(_dir)
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 RESPAN_BASE_URL = "https://api.respan.ai/api"
 RESPAN_API_KEY = os.environ.get("RESPAN_API_KEY", "")

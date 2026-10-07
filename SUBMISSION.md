@@ -113,7 +113,7 @@ git clone https://github.com/UJameel/company-brain-hackathon && cd company-brain
 uv venv --python 3.12 .venv && source .venv/bin/activate
 uv pip install cognee scalekit-sdk-python openai python-dotenv respan-ai pytest
 cp .env.example .env    # set RESPAN_API_KEY (+ LLM_API_KEY/EMBEDDING_API_KEY to the same), absolute SYSTEM_ROOT_DIRECTORY / DATA_ROOT_DIRECTORY
-mkdir -p .cognee_system .data_storage
+
 python -m pytest -q tests
 
 python -m pantheon ingest                     # replay recorded pulls (no SaaS accounts needed)
