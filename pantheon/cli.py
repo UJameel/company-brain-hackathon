@@ -77,6 +77,10 @@ def main() -> None:
     dc.add_argument("--note", default=None, help="why, or how to change it (revise)")
     dc.add_argument("--execute", action="store_true", help="approve for real through Scalekit (default dry-run)")
 
+    sh = sub.add_parser("shadow", help="Themis grades a local model against the gateway on routing and judging (no Cognee access)")
+    sh.add_argument("--model", default=None, help="Ollama tag (default: LOCAL_MODEL)")
+    sh.add_argument("--labels", default="after,before-coverage", help="results labels to re-judge")
+
     m = sub.add_parser("improve", help="Morpheus: run Cognee's improve() on a user's dataset")
     m.add_argument("--user", choices=list(config.USERS), required=True)
 
@@ -171,6 +175,10 @@ async def _run(args) -> None:
         from . import hephaestus
 
         print(json.dumps(await hephaestus.decide(args.action_id, args.decision, args.note, dry_run=not args.execute), indent=2, default=str)[:1500])
+    elif args.cmd == "shadow":
+        from . import llm, shadow
+
+        shadow.run(args.model or llm.LOCAL_MODEL, args.labels.split(","))
     elif args.cmd == "improve":
         import cognee
         from .cerberus import get_or_create_user
