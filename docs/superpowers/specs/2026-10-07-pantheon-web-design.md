@@ -333,8 +333,8 @@ the branch holding this work until merged.
 4. Brain: geometry and regions with tests, rendering, choreography, live mode in the app.
 5. Landing page.
 6. Dockerfile, Fly deploy, Vercel. Tier 1 complete; demo can run.
-7. Graph route and view; Connections page and sync. Tier 2.
-8. Notes and Insights. Tier 3.
+7. Graph route and view; Connections page and sync; Actions page. Tier 2.
+8. Notes (add knowledge). Tier 3.
 9. Playwright pass, Lighthouse, screenshots.
 
 ## 10. Risks and open questions
@@ -348,6 +348,29 @@ the branch holding this work until merged.
   blocks that user's chat meanwhile. The UI says so.
 - Grants on the hosted API are shared state; Revoke and Reset exist for that.
 - `three` plus `d3-force-3d` add roughly 180 KB gzipped, dynamically imported.
-- Branching: both sessions share one working tree on `main`; the backend session has been
-  committing there, including this spec. Decision needed from Usman: a `web` branch in a
-  separate worktree, or everyone on `main` for the hackathon.
+- Branching: resolved. This work lives on `worktree-web` in a git worktree under
+  `.claude/worktrees/web`; the backend session stays on `main`. Merge before the demo.
+
+## 11. Addendum for backend commit b27a51b (proposals and discovery)
+
+The backend now does two things the app must surface. Both are additive.
+
+- **Proposals.** After every question, Hephaestus may propose up to two follow-ups
+  (`suggested_actions` on the result): a Slack message, a GitHub issue, or a request for
+  access to a hidden dataset. The person approves (executes as them through Scalekit),
+  declines, or revises with a note (Hephaestus redrafts and returns a new proposal). Every
+  decision is remembered into the person's dataset as `source:pantheon kind:decision`, so
+  the brain learns their preferences. In the app: a "Hephaestus suggests" block under each
+  answer with Approve, Decline and Revise, an Actions page listing everything still pending
+  for the current user, and the motor cortex lights when proposals arrive. API:
+  `GET /actions?user=` and `POST /actions/{id}/decide {decision, note, execute}`. This
+  replaces the tier 3 "Insights" idea: the agents already come to you.
+- **Discovery.** Connections are whatever the person has linked through Scalekit
+  (`mnemosyne.discover`), any of 400+ connectors, not a fixed three. Source tags are
+  generic `source:<connector>`. The Connections page lists discovered systems with status,
+  adapter kind and a Connect link, and Sync pulls everything discovered by default. Bob
+  having nothing connected is correct and is shown as such.
+- **Copy.** Mnemosyne: "every system of record your company lives in, pulled as you,
+  through 400+ Scalekit connectors; the more you connect, the better the brain."
+  Hephaestus: "acts on request, proposes follow-ups; you approve, decline or revise, and it
+  remembers your decisions."
