@@ -33,6 +33,8 @@ def main() -> None:
     g.add_argument("--owner", choices=list(config.USERS), required=True)
     g.add_argument("--to", choices=list(config.USERS), required=True)
 
+    gr = sub.add_parser("grants", help="Cerberus: live shares, read from Cognee")
+
     rv = sub.add_parser("revoke", help="Cerberus: owner revokes a share")
     rv.add_argument("--owner", choices=list(config.USERS), required=True)
     rv.add_argument("--to", choices=list(config.USERS), required=True)
@@ -116,6 +118,11 @@ async def _run(args) -> None:
         from . import cerberus
 
         print(await cerberus.grant(args.owner, args.to))
+    elif args.cmd == "grants":
+        from . import cerberus
+
+        for g in await cerberus.grants():
+            print(f"{g['owner']} -> {g['grantee']}  {g['dataset']}  ({g['permission']})")
     elif args.cmd == "revoke":
         from . import cerberus
 

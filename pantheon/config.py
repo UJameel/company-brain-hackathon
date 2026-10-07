@@ -48,7 +48,7 @@ def scalekit_configured() -> bool:
 def load_state() -> dict:
     if STATE_FILE.exists():
         return json.loads(STATE_FILE.read_text())
-    return {"datasets": {}, "grants": []}
+    return {"datasets": {}}
 
 
 def save_state(state: dict) -> None:

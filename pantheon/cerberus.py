@@ -70,8 +70,21 @@ async def scope(user_key: str) -> dict:
         extra = sorted(set(meta.get("tags", [])) - have)
         if extra:
             hidden[name] = {**meta, "extra": extra}
+    shared_in = [n for n in readable if known.get(n, {}).get("owner") not in (None, user_key)]
     return {"user": user_key, "identifier": config.USERS[user_key], "readable": readable,
-            "readable_ids": [i for _, i in pairs], "hidden": hidden}
+            "readable_ids": [i for _, i in pairs], "hidden": hidden, "shared_in": shared_in}
+
+
+async def grants() -> list[dict]:
+    """Live shares, derived from Cognee (the source of truth), not from the state file."""
+    known = config.load_state().get("datasets", {})
+    out = []
+    for user_key in config.USERS:
+        for name in await readable_datasets(user_key):
+            owner = known.get(name, {}).get("owner")
+            if owner and owner != user_key:
+                out.append({"owner": owner, "grantee": user_key, "dataset": name, "permission": "read"})
+    return out
 
 
 async def grant(owner_key: str, grantee_key: str, dataset_name: str | None = None, permission: str = "read") -> str:
@@ -82,9 +95,6 @@ async def grant(owner_key: str, grantee_key: str, dataset_name: str | None = Non
     dataset_name = dataset_name or config.dataset_for(owner_key)
     (ds,) = await get_authorized_existing_datasets([dataset_name], "share", owner)
     await authorized_give_permission_on_datasets(grantee.id, [ds.id], permission, owner.id)
-    state = config.load_state()
-    state.setdefault("grants", []).append({"owner": owner_key, "grantee": grantee_key, "dataset": dataset_name, "permission": permission})
-    config.save_state(state)
     return f"{owner_key} granted {permission} on {dataset_name} to {grantee_key}"
 
 
@@ -94,7 +104,4 @@ async def revoke(owner_key: str, grantee_key: str, dataset_name: str | None = No
     dataset_name = dataset_name or config.dataset_for(owner_key)
     (ds,) = await get_authorized_existing_datasets([dataset_name], "share", owner)
     await authorized_revoke_permission_on_datasets(grantee.id, [ds.id], permission, owner.id)
-    state = config.load_state()
-    state["grants"] = [g for g in state.get("grants", []) if not (g["owner"] == owner_key and g["grantee"] == grantee_key and g["dataset"] == dataset_name)]
-    config.save_state(state)
     return f"{owner_key} revoked {permission} on {dataset_name} from {grantee_key}"
