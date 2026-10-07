@@ -35,7 +35,7 @@ export function Chat() {
   const send = async (q: string) => {
     setBusy(true);
     try { if (compare) await Promise.all([runOne("alice", q), runOne("bob", q)]); else await runOne(s.user, q); }
-    finally { setBusy(false); s.setRegion(null); }
+    finally { setBusy(false); }  // the last region stays lit until the next question, so the audience can read it
   };
 
   const pairs: Turn[][] = [];
