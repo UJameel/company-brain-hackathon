@@ -16,17 +16,23 @@ EXTRA_QUESTIONS = [
 ]
 
 
+from . import decide as _decide
+
+
 def _with_local(model: str | None, enabled: bool):
-    """Temporarily point llm at a local model (or disable local) for the duration of a call."""
-    prev = (llm.LOCAL_ENABLED, llm.LOCAL_MODEL, llm._local_down)
+    """Temporarily point llm (and the decision model) at a local model, or disable local."""
+    prev = (llm.LOCAL_ENABLED, llm.LOCAL_MODEL, llm._local_down, _decide.ENABLED, _decide.DECISION_MODEL, _decide._down)
     llm.LOCAL_ENABLED, llm._local_down = enabled, False
+    _decide.ENABLED, _decide._down = enabled, False
     if model:
         llm.LOCAL_MODEL = model
+        _decide.DECISION_MODEL = model
+        _decide._client = None
     return prev
 
 
 def _restore(prev):
-    llm.LOCAL_ENABLED, llm.LOCAL_MODEL, llm._local_down = prev
+    llm.LOCAL_ENABLED, llm.LOCAL_MODEL, llm._local_down, _decide.ENABLED, _decide.DECISION_MODEL, _decide._down = prev
 
 
 def router(model: str) -> dict:
@@ -68,6 +74,10 @@ def judge(model: str, label: str) -> dict:
 
 
 def run(model: str, labels: list[str]) -> dict:
+    prev = _with_local(model, True)
+    secs = _decide.warm()
+    _restore(prev)
+    print(f"warm-up {model}: {secs}s" if secs is not None else f"warm-up {model}: decision endpoint unavailable, chat/gateway path will be used")
     report = {"router": router(model), "judge": [judge(model, l) for l in labels if (config.EVALS_DIR / f"results-{l}.json").exists()]}
     (config.EVALS_DIR / f"shadow-{model.replace(':', '-').replace('/', '-')}.json").write_text(json.dumps(report, indent=2))
     return report

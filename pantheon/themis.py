@@ -57,6 +57,12 @@ def fact_check(scenario: dict, result: dict) -> dict:
 
 
 def judge(scenario: dict, result: dict) -> dict:
+    from . import decide
+
+    d = decide.judge(scenario["question"], scenario.get("must_mention", []), scenario.get("must_not_mention", []), result["answer"])
+    if d is not None:
+        score = 1.0 - 0.5 * (not d["required_present"]) - 0.5 * d["forbidden_present"] - 0.5 * d["contradiction"]
+        return {"score": max(score, 0.0), **d}
     prompt = (f"Question: {scenario['question']}\nMust contain: {scenario.get('must_mention', [])}\n"
               f"Must NOT contain: {scenario.get('must_not_mention', [])}\nCandidate answer:\n{result['answer']}")
     raw = llm.complete("judge", JUDGE_SYSTEM, prompt, max_tokens=200, json_mode=True)

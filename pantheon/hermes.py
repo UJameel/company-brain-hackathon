@@ -30,6 +30,12 @@ ROUTE_SYSTEM = """Classify the request for a company brain. Reply with JSON only
 
 @task(name="hermes.route")
 def route(question: str, usage: llm.Usage) -> dict:
+    from . import decide
+
+    known = sorted({t.split(":", 1)[1] for d in config.load_state().get("datasets", {}).values() for t in d.get("tags", []) if t.startswith("channel:")})
+    plan = decide.route(question, known, usage)
+    if plan is not None:
+        return plan
     raw = llm.complete("route", ROUTE_SYSTEM, question, usage=usage, max_tokens=120, json_mode=True)
     try:
         plan = json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
@@ -85,7 +91,7 @@ async def ask(user_key: str, question: str, dry_run: bool = True, suggest: bool 
     usage = llm.Usage()
     feed: list[str] = []
     plan = route(question, usage)
-    feed.append(f"Hermes routed: {plan['intent']} via {'/'.join(llm.model_for('route'))}")
+    feed.append(f"Hermes routed: {plan['intent']} via {'/'.join(llm.model_for('route'))}" + (f" (p={plan['confidence']})" if plan.get("confidence") else ""))
     scope = await _scope(user_key)
     feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
     q = question

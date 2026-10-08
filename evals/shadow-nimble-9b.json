@@ -1,0 +1,191 @@
+{
+  "router": {
+    "model": "nimble:9b",
+    "agree": 19,
+    "n": 20,
+    "rows": [
+      {
+        "question": "When is the Atlas launch and who owns the announcement?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.93,
+        "gateway_s": 1.45
+      },
+      {
+        "question": "When is the Atlas launch and who owns the announcement?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.69,
+        "gateway_s": 1.0
+      },
+      {
+        "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.39,
+        "gateway_s": 1.07
+      },
+      {
+        "question": "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.24,
+        "gateway_s": 0.96
+      },
+      {
+        "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.59,
+        "gateway_s": 1.06
+      },
+      {
+        "question": "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.27,
+        "gateway_s": 1.05
+      },
+      {
+        "question": "What will the Pro plan cost after the Atlas launch?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.36,
+        "gateway_s": 1.2
+      },
+      {
+        "question": "What will the Pro plan cost after the Atlas launch?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.67,
+        "gateway_s": 0.91
+      },
+      {
+        "question": "Which GitHub issue is Bob working on, what is it about, and what did Alice tell him about the price to show?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.52,
+        "gateway_s": 1.19
+      },
+      {
+        "question": "When does the staging deploy freeze start?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.51,
+        "gateway_s": 1.12
+      },
+      {
+        "question": "When does the staging deploy freeze start?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.35,
+        "gateway_s": 1.02
+      },
+      {
+        "question": "Summarize the status of the Paddle billing migration using both Slack and GitHub.",
+        "local": "question/None",
+        "gateway": "action/slack_send_message",
+        "agree": false,
+        "local_s": 2.97,
+        "gateway_s": 1.77
+      },
+      {
+        "question": "Is Northwind hiring this quarter?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.51,
+        "gateway_s": 0.74
+      },
+      {
+        "question": "Is Northwind hiring this quarter?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.3,
+        "gateway_s": 0.68
+      },
+      {
+        "question": "Who should I ask about the launch announcement? Draft a short Slack message to them asking for the blog post ETA.",
+        "local": "action/slack_send_message",
+        "gateway": "action/slack_send_message",
+        "agree": true,
+        "local_s": 1.06,
+        "gateway_s": 1.18
+      },
+      {
+        "question": "What did the Paddle partner rep email us, and is there anything we need to act on?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.94,
+        "gateway_s": 1.43
+      },
+      {
+        "question": "What did the Paddle partner rep email us, and is there anything we need to act on?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 0.56,
+        "gateway_s": 2.04
+      },
+      {
+        "question": "Post a summary of the Paddle migration status to #engineering.",
+        "local": "action/slack_send_message",
+        "gateway": "action/slack_send_message",
+        "agree": true,
+        "local_s": 4.98,
+        "gateway_s": 3.08
+      },
+      {
+        "question": "File a ticket for the pricing page to show $59 after launch.",
+        "local": "action/github_issue_create",
+        "gateway": "action/github_issue_create",
+        "agree": true,
+        "local_s": 22.06,
+        "gateway_s": 2.45
+      },
+      {
+        "question": "Who is on leave next week?",
+        "local": "question/None",
+        "gateway": "question/None",
+        "agree": true,
+        "local_s": 305.01,
+        "gateway_s": 1.22
+      }
+    ]
+  },
+  "judge": [
+    {
+      "model": "nimble:9b",
+      "label": "after",
+      "mean": 1.0,
+      "stored_mean": 1.0,
+      "disagreements": []
+    },
+    {
+      "model": "nimble:9b",
+      "label": "before-coverage",
+      "mean": 0.877,
+      "stored_mean": 0.89,
+      "disagreements": [
+        [
+          "launch-risk-bob",
+          0.5,
+          0.3
+        ]
+      ]
+    }
+  ]
+}

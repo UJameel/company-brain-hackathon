@@ -78,6 +78,8 @@ def main() -> None:
     dc.add_argument("--note", default=None, help="why, or how to change it (revise)")
     dc.add_argument("--execute", action="store_true", help="approve for real through Scalekit (default dry-run)")
 
+    wm = sub.add_parser("warm", help="Load the local decision model so the first request is fast")
+
     sh = sub.add_parser("shadow", help="Themis grades a local model against the gateway on routing and judging (no Cognee access)")
     sh.add_argument("--model", default=None, help="Ollama tag (default: LOCAL_MODEL)")
     sh.add_argument("--labels", default="after,before-coverage", help="results labels to re-judge")
@@ -176,6 +178,10 @@ async def _run(args) -> None:
         from . import hephaestus
 
         print(json.dumps(await hephaestus.decide(args.action_id, args.decision, args.note, dry_run=not args.execute), indent=2, default=str)[:1500])
+    elif args.cmd == "warm":
+        from . import decide
+
+        print("warm-up:", decide.warm(), "s", "|", decide.DECISION_MODEL)
     elif args.cmd == "shadow":
         from . import llm, shadow
 

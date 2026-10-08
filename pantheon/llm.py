@@ -34,6 +34,11 @@ _local_down = False
 
 def model_for(step: str) -> tuple[str, str]:
     """(provider, model) actually used for a step right now."""
+    if step in ("route", "judge"):
+        from . import decide
+
+        if decide.available():
+            return "ollama-decision", decide.DECISION_MODEL
     if LOCAL_ENABLED and step in LOCAL_STEPS and not _local_down:
         return "ollama", LOCAL_MODEL
     return "respan", ROUTES[step]
