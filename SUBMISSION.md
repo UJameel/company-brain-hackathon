@@ -155,8 +155,19 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 7. Next: Morpheus nightly consolidation, Eris contradiction detection across systems (ported from my personal brain), more adapters.
 ```
 
+## Judging criteria, answered
+
+**Originality & technical depth.** Authorization enforced at two layers and lined up by one key: Scalekit per-user tokens decide what each person can pull, Cognee per-user datasets decide what each can recall, the Scalekit identifier is the Cognee user, shared datasets are addressed by id. On top: per-user discovery of every connected system with known adapters plus a generic read-only adapter; a local decision model (nimble:9b) for closed-set steps with typed questions and probabilities, no text generation; a propose → approve/decline/revise loop driven from the chat, with decisions remembered; an independent evaluator whose before/after re-judges stored answers with the same judge. What is unique: the brain knows who is asking, says what exists that you cannot see and who owns it, proposes rather than acts, and treats every passage as untrusted data (a planted prompt-injection scenario is in the eval and passes).
+
+**Use of Scalekit.** Three live connections used as the user (Slack, GitHub issues/PRs/files, Notion pages); discovery from the user's connected accounts; every read and write through `execute_tool(identifier=...)`, no shared token; a real write-back (GitHub issue UJameel/northwind-atlas#5 opened as the user); a Virtual MCP server exposing only the write tools with per-user session tokens; consent links per user and connection from CLI and the Connections page.
+
+**Use of Cognee.** `ENABLE_BACKEND_ACCESS_CONTROL=true`, one dataset per user, one document per channel/issue/PR/file/page, `node_set` provenance (source, channel, repo, owner, trust), live grant and revoke, chunk retrieval so provenance reaches the answer and the scorer, decisions remembered into the user's dataset, `improve()` as Morpheus. Cross-source answers with per-fact citations (PR #3 blocker stitches Slack, GitHub PR, GitHub issue, Notion), and cross-source grounding is scored via `expected_sources`.
+
+**Presentation & usability.** Three-minute story: Alice asks, cited cross-source answer; Bob asks, gets less and is told why; Alice grants, Bob asks again, the gap closes; Alice says "open an issue for Marco" and it appears on GitHub under her name; Quality page shows isolation 0.99 with zero leaks, coverage 0.89 → 1.00. For users it is a chat you sign into as yourself: ask in plain language, get an answer with sources, the brain suggests a follow-up, you say "yes send it" or "make it shorter". Models and costs sit behind a collapsed details row.
+
 ## Links
 
+- **Live app:** https://company-brain-hackathon-bklilv9xk-usmanjameel1s-projects.vercel.app (Next.js on Vercel; API on Fly; falls back to a recorded run of the four demo questions if the API is unreachable)
 - Repo: https://github.com/UJameel/company-brain-hackathon
 - Fictional company repo (live GitHub source + write-back target): https://github.com/UJameel/northwind-atlas
 - Respan traces: platform.respan.ai, workspace ask-luca, workflow `pantheon.ask`
