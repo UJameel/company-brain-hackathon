@@ -29,6 +29,33 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
 
 > **Names on screen:** the engineering lead is **David** and the contractor is **Goliath** everywhere people are named (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
 
+## How it works
+
+Connect each system once, as each employee. Every question then runs through the agents in order: route, scope, recall, answer, propose, prove. The person decides what happens next in plain words, and the decision is remembered.
+
+```mermaid
+flowchart TD
+    subgraph connect["Connect once, remember per person"]
+        SK["Scalekit connected accounts<br/>Slack · GitHub · Notion · anything"]
+        MN["Mnemosyne<br/>pulls each system as the user"]
+        CG[("Cognee<br/>one knowledge graph per person")]
+    end
+    SK --> MN
+    MN -->|"remember into that person's own dataset"| CG
+
+    U(["David or Goliath asks in the web console"]) --> H["Hermes<br/>routes the turn, picks the model per step"]
+    H --> C["Cerberus<br/>scopes recall to what this person may read"]
+    C --> A["Athena<br/>recalls scoped passages, writes a cited answer"]
+    CG -->|"recall, readable datasets only"| A
+    A --> ANS["Answer, streamed step by step<br/>sources · what exists that you cannot see · who to ask"]
+    A --> HP["Hephaestus<br/>proposes the next action"]
+    HP --> D{"approve · decline · revise<br/>in plain words, in the chat"}
+    D -->|"approved"| EX["Scalekit write, as the user<br/>GitHub issue · Slack message · Notion page"]
+    D -.->|"decision remembered"| CG
+    A --> T["Themis<br/>deterministic fact check + pinned LLM judge"]
+    T --> R["Respan<br/>gateway for every LLM call · traces · evals"]
+```
+
 ## The agents (brain region → job)
 
 | Agent | Brain region | Job | Layer |
@@ -42,11 +69,11 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
 | **Morpheus** | sleep | consolidation: Cognee `improve()` | Cognee |
 
 ```text
-[ Scalekit connections, per user ]  --execute_tool(identifier=alice)-->  Mnemosyne
+[ Scalekit connections, per user ]  --execute_tool(identifier=<user>)-->  Mnemosyne
         |                                                                   |
-        |            remember(dataset="alice-brain", user=alice, node_set=[source:slack, channel:general, owner:alice])
+        |            remember(dataset="<user>-brain", user=<user>, node_set=[source:slack, channel:general, owner:<user>])
         v                                                                   v
-[ Cognee, ENABLE_BACKEND_ACCESS_CONTROL=true ]  <--recall(datasets=readable, user=bob)--  Cerberus -> Athena
+[ Cognee, ENABLE_BACKEND_ACCESS_CONTROL=true ]  <--recall(datasets=readable, user=<other user>)--  Cerberus -> Athena
         |                                                                   |
         v                                                                   v
 [ Respan: gateway (all LLM calls), traces (pantheon.ask workflow), evals (Themis) ]   Hephaestus -> Scalekit write, as the user
@@ -103,9 +130,9 @@ Closed-set decisions do not need a text-generating model at all. With `PANTHEON_
 |---|---|---|
 | Scalekit connections | Slack, GitHub (PAT) | Slack only |
 | Slack membership | #general, #engineering, **#leadership (private)** | #general, #engineering |
-| Cognee dataset | `alice-brain` (owner) | `bob-brain` (owner) |
+| Cognee dataset | David's own dataset (owner) | Goliath's own dataset (owner) |
 | Before grant | sees everything | public channels only; brain says what is hidden and who owns it |
-| Grant | `pantheon grant --owner alice --to bob` → Cognee `authorized_give_permission_on_datasets(read)` | |
+| Grant | David shares the dataset with Goliath (`pantheon grant`, or the button in the chat) → Cognee `authorized_give_permission_on_datasets(read)` | |
 | After grant | unchanged | cross-source answers now grounded in GitHub too |
 
 ## Evaluation
@@ -120,7 +147,7 @@ Three numbers, because a grant changes what *correct* means:
 |---|---|---|---|
 | `before` | isolated | isolated (Goliath must not see leadership facts) | **no leaks**: Goliath refuses correctly |
 | `before-coverage` | isolated | full knowledge | how much of the team's questions Goliath's brain can answer before the share |
-| `after` | David shared `alice-brain` with Goliath | full knowledge | the difference closes |
+| `after` | David shared the dataset with Goliath | full knowledge | the difference closes |
 
 ## Memory design
 
