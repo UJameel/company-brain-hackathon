@@ -35,7 +35,8 @@ Rules:
 - Be concise (2-5 sentences). State facts with their source in brackets, e.g. "(Slack #general)" or "(GitHub PR #42)".
 - If the passages do not contain the answer, say exactly what is missing. Never invent.
 - If a HIDDEN section lists datasets the user cannot read, add one final sentence:
-  "There is information in <dataset> you do not have access to; ask <owner> for access."
+  "There is information in <owner>'s brain you do not have access to; ask <owner> for access."
+  Use the owner's display name exactly as given in HIDDEN.
 - If there is no HIDDEN section, say nothing about access or permissions.
 - Do not reveal anything that is not in the readable passages."""
 
@@ -73,8 +74,8 @@ async def answer(user_key: str, question: str, scope: dict, usage: llm.Usage) ->
     hidden_txt = ""
     if hidden:
         hidden_txt = "\n\nHIDDEN (exists, not readable by this user):\n" + "\n".join(
-            f"- {name} (owner: {meta.get('owner')}, contains: {', '.join(meta.get('extra') or meta.get('sources', []))})" for name, meta in hidden.items()
+            f"- {config.display(meta.get('owner'))}'s brain [{name}] (owner: {config.display(meta.get('owner'))}, contains: {', '.join(meta.get('extra') or meta.get('sources', []))})" for name, meta in hidden.items()
         )
-    prompt = f"User: {user_key} ({scope['identifier']})\nQuestion: {question}\n\nCONTEXT:\n{context}{hidden_txt}"
+    prompt = f"User: {config.display(user_key)} ({scope['identifier']})\nQuestion: {question}\n\nCONTEXT:\n{context}{hidden_txt}"
     text = llm.complete("synthesize", SYSTEM, prompt, usage=usage)
     return {"answer": text, "sources": sources_in(passages), "passages": len(passages), "hidden": list(hidden.keys())}

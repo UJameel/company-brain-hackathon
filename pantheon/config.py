@@ -26,6 +26,14 @@ USERS: dict[str, str] = {
 }
 COGNEE_PASSWORD = "hackathon-pw"
 
+# What people are called on screen. Keys, datasets and sample data keep alice/bob.
+DISPLAY_NAMES: dict[str, str] = {"alice": os.environ.get("DISPLAY_ALICE", "David"), "bob": os.environ.get("DISPLAY_BOB", "Goliath")}
+ROLES: dict[str, str] = {"alice": "Engineering lead", "bob": "Frontend contractor"}
+
+
+def display(user_key: str) -> str:
+    return DISPLAY_NAMES.get(user_key, user_key)
+
 
 def dataset_for(user_key: str) -> str:
     return f"{user_key}-brain"

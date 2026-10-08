@@ -27,6 +27,8 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
   <img src="docs/screenshots/landing.png" alt="Pantheon landing page: the company brain that knows who is asking" width="100%">
 </p>
 
+> **Names on screen:** the engineering lead appears as **David** and the contractor as **Goliath** in the app and the demo (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
+
 ## The agents (brain region → job)
 
 | Agent | Brain region | Job | Layer |

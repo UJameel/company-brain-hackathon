@@ -143,7 +143,7 @@ async def ask(user_key: str, question: str, dry_run: bool = True, suggest: bool 
                 "usage": usage.calls, "feed": feed, "latency_s": round(time.time() - t0, 2)}
     feed.append(f"Hermes routed: {plan['intent']} via {'/'.join(llm.model_for('route'))}" + (f" (p={plan['confidence']})" if plan.get("confidence") else ""))
     scope = await _scope(user_key)
-    feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
+    feed.append(f"Cerberus: {config.display(user_key)} may read {scope['readable']}; hidden {list(scope['hidden'])}")
     q = question
     if plan.get("intent") == "action":
         q = question + "\n\n(Hephaestus, the action agent, will perform the requested action right after you. Do not say you cannot act; give the facts and the person it concerns.)"

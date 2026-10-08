@@ -8,6 +8,9 @@
 
 ## Company Brain Overview
 
+> **Names on screen:** the engineering lead appears as **David** and the contractor as **Goliath** in the app and the demo (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
+
+
 Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. Wherever the company lives, Pantheon pulls it: Mnemosyne discovers every system of record each employee has connected through Scalekit and pulls it *as that employee* (known adapters for Slack, GitHub, Notion, Gmail, Calendar; a generic read-only adapter for any of the other 400+ connectors), remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Bob what exists that he cannot see and who owns it; Alice grants access live; Bob's answer changes; the eval shows before and after.
 
 - Data sources connected through Scalekit (≥ 2 apps): Slack (`slack`), GitHub (`github-connect`), Notion (`notion`, live: the leadership launch-plan page)
