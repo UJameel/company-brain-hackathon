@@ -171,7 +171,19 @@ async def decide(action_id: str, decision: str, note: str | None = None, dry_run
 
 
 async def _remember_decision(entry: dict) -> None:
-    """The brain learns how this person acts: what they approve, decline, or change."""
+    """The brain learns how this person acts: what they approve, decline, or change.
+    Remembering runs Cognee's graph extraction (~10s). In a long-lived process (the API) set
+    PANTHEON_ASYNC_MEMORY=1 to do it in the background so the chat reply is immediate."""
+    import asyncio
+    import os
+
+    if os.environ.get("PANTHEON_ASYNC_MEMORY") == "1":
+        asyncio.ensure_future(_remember_decision_now(entry))
+        return
+    await _remember_decision_now(entry)
+
+
+async def _remember_decision_now(entry: dict) -> None:
     try:
         import cognee
         from .cerberus import get_or_create_user

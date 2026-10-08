@@ -23,9 +23,12 @@ except Exception:  # tracing is optional; the brain still works
 
 
 ROUTE_SYSTEM = """Classify the request for a company brain. Reply with JSON only:
-{"intent": "question" | "action", "action_tool": null | "slack_send_message" | "github_issue_create",
- "target_channel": null | "#channel-name", "title": null | "<short issue title if opening an issue>"}.
-"action" means the user asks to send, post, draft a message, or open/file an issue or ticket."""
+{"intent": "question" | "action" | "decision", "action_tool": null | "slack_send_message" | "github_issue_create",
+ "target_channel": null | "#channel-name", "title": null | "<short issue title if opening an issue>",
+ "decision": null | "approve" | "decline" | "revise"}.
+"action" means the user asks to send, post, draft a message, or open/file an issue or ticket.
+"decision" means the user is replying to a proposed action the assistant just suggested: yes/send it/go ahead
+= approve; no/skip/don't = decline; shorter/reword/other channel = revise. Only use "decision" if PENDING is true."""
 
 
 @task(name="hermes.route")
@@ -33,14 +36,23 @@ def route(question: str, usage: llm.Usage) -> dict:
     from . import decide
 
     known = sorted({t.split(":", 1)[1] for d in config.load_state().get("datasets", {}).values() for t in d.get("tags", []) if t.startswith("channel:")})
-    plan = decide.route(question, known, usage)
+    pending = _pending_for(usage)
+    plan = decide.route(question, known, usage, pending=pending)
     if plan is not None:
         return plan
-    raw = llm.complete("route", ROUTE_SYSTEM, question, usage=usage, max_tokens=120, json_mode=True)
+    raw = llm.complete("route", ROUTE_SYSTEM, f"PENDING: {bool(pending)}\nRequest: {question}", usage=usage, max_tokens=140, json_mode=True)
     try:
         plan = json.loads(raw[raw.find("{") : raw.rfind("}") + 1])
     except Exception:
         return {"intent": "question", "action_tool": None, "target_channel": None}
+    if plan.get("intent") == "decision":
+        if not pending:
+            plan["intent"] = "question"
+        else:
+            plan["decision"] = plan.get("decision") if plan.get("decision") in ("approve", "decline", "revise") else "revise"
+            plan["proposal_id"] = pending[0]["id"]
+            plan["action_tool"] = None
+            return plan
     # Normalise: a tool only makes sense for an action; small models sometimes name one anyway.
     if plan.get("intent") != "action":
         plan["intent"] = "question"
@@ -48,6 +60,16 @@ def route(question: str, usage: llm.Usage) -> dict:
     elif plan.get("action_tool") not in ("slack_send_message", "github_issue_create"):
         plan["action_tool"] = "slack_send_message"
     return plan
+
+
+_route_user: list[str] = []  # set by ask() so route() can see this user's pending proposals
+
+
+def _pending_for(_usage) -> list[dict]:
+    if not _route_user:
+        return []
+    items = hephaestus.pending(_route_user[-1])
+    return sorted(items, key=lambda p: p["created_at"], reverse=True)
 
 
 @task(name="cerberus.scope")
@@ -90,7 +112,28 @@ async def ask(user_key: str, question: str, dry_run: bool = True, suggest: bool 
     t0 = time.time()
     usage = llm.Usage()
     feed: list[str] = []
-    plan = route(question, usage)
+    _route_user.append(user_key)
+    try:
+        plan = route(question, usage)
+    finally:
+        _route_user.pop()
+    if plan.get("intent") == "decision":
+        # The user answered a proposal in the chat: apply it and report, no recall needed.
+        decided = await hephaestus.decide(plan["proposal_id"], plan["decision"], note=question if plan["decision"] == "revise" else None, dry_run=dry_run)
+        feed.append(f"Hermes routed: decision ({plan['decision']}) on proposal {plan['proposal_id']}")
+        if "error" in decided:
+            text = decided["error"]
+        elif plan["decision"] == "revise":
+            text = f"Revised. New proposal [{decided['proposal']['id']}]: {json.dumps(decided['proposal']['input'])}. Say 'yes' to send it, 'no' to drop it, or tell me what to change."
+        elif plan["decision"] == "approve":
+            a = decided["action"]; st = a["status"]
+            text = ("Done. " if st == "executed" else "Approved (dry run, nothing sent). ") + f"{a['tool']} as {a['as_user']}: {json.dumps(a['input'])[:300]}"
+        else:
+            text = "Declined. I'll remember that you didn't want this one."
+        feed.append(f"Hephaestus: {plan['decision']} -> {decided.get('action', decided.get('proposal', {})).get('status', 'ok')}")
+        return {"user": user_key, "question": question, "answer": text, "sources": [], "hidden": [], "action": decided.get("action"),
+                "decision": decided, "suggested_actions": [decided["proposal"]] if plan["decision"] == "revise" else [],
+                "usage": usage.calls, "feed": feed, "latency_s": round(time.time() - t0, 2)}
     feed.append(f"Hermes routed: {plan['intent']} via {'/'.join(llm.model_for('route'))}" + (f" (p={plan['confidence']})" if plan.get("confidence") else ""))
     scope = await _scope(user_key)
     feed.append(f"Cerberus: {user_key} may read {scope['readable']}; hidden {list(scope['hidden'])}")
