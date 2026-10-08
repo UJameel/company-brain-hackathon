@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { applyEvent, newTurn, type Turn } from "@/lib/chat";
 import { findRecorded, replay } from "@/lib/recorded";
 import { useSession, useUser } from "@/lib/session";
+import { loadThread, saveThread } from "@/lib/threadStore";
 import type { ChatEvent, User } from "@/lib/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PEOPLE } from "../app/SignIn";
@@ -15,6 +16,9 @@ export function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const restored = useRef(false);
+  useEffect(() => { setTurns(loadThread(me)); restored.current = true; }, [me]);  // the thread survives a refresh
+  useEffect(() => { if (restored.current) saveThread(me, turns); }, [me, turns]);
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
 
   const update = (id: string, e: ChatEvent) => setTurns((ts) => ts.map((t) => (t.id === id ? applyEvent(t, e) : t)));

@@ -40,11 +40,12 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
       {typeof input.channel === "string" && <p className="font-mono text-[11px] text-muted">to {input.channel}</p>}
       {proposal.tool === "request_access" && typeof input.owner === "string" && <p className="font-mono text-[11px] text-muted">owner {input.owner} · dataset {String(input.dataset ?? "")}</p>}
       {error && <p className="mt-2 font-mono text-[11px] text-muted">Could not record the decision: {error}</p>}
-      {s.mode === "live" && !settled && (
+      {!settled && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <button onClick={() => act("approve")} disabled={!!busy} className="btn btn-sm btn-primary">{busy === "approve" ? "Doing it" : proposal.tool === "github_issue_create" ? "Approve and open it" : "Approve and send it"}</button>
-          <button onClick={() => act("decline")} disabled={!!busy} className="btn btn-sm">{busy === "decline" ? "Declining" : "Decline"}</button>
-          <button onClick={() => setRevising(!revising)} disabled={!!busy} className="btn btn-sm">Revise</button>
+          <button onClick={() => act("approve")} disabled={!!busy || s.mode !== "live"} className="btn btn-sm btn-primary">{busy === "approve" ? "Doing it" : proposal.tool === "github_issue_create" ? "Approve and open it" : "Approve and send it"}</button>
+          <button onClick={() => act("decline")} disabled={!!busy || s.mode !== "live"} className="btn btn-sm">{busy === "decline" ? "Declining" : "Decline"}</button>
+          <button onClick={() => setRevising(!revising)} disabled={!!busy || s.mode !== "live"} className="btn btn-sm">Revise</button>
+          {s.mode !== "live" && <span className="font-mono text-[11px] text-muted">Deciding needs the live brain</span>}
           {revising && (
             <>
               <label htmlFor={`note-${proposal.id}`} className="sr-only">Revision note</label>
