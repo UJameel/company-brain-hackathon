@@ -1,6 +1,6 @@
 # Pantheon — a Company Brain run by named agents
 
-> Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07. Solo entry by Usman Jameel.
+> Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07. Solo entry by Usman Jameel. **Live app:** https://company-brain-hackathon.vercel.app
 
 Pantheon is a company brain for a fictional 40-person SaaS company, **Northwind Labs**. Wherever the company lives, Pantheon pulls it: every system of record an employee has connected through Scalekit (400+ connectors: Slack, GitHub, Notion, Gmail, Calendar, Drive, Linear, Jira, HubSpot and the rest) is pulled *as that employee*, remembered in their per-user knowledge graph (Cognee), and queried with provenance. The more systems you connect, the better the brain gets. It acts in your tools as you, proposes follow-up actions you approve, decline or revise, and proves it works with an independent, traced evaluation (Respan).
 

@@ -167,7 +167,7 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 
 ## Links
 
-- **Live app:** https://company-brain-hackathon-bklilv9xk-usmanjameel1s-projects.vercel.app (Next.js on Vercel; API on Fly; falls back to a recorded run of the four demo questions if the API is unreachable)
+- **Live app:** https://company-brain-hackathon.vercel.app (Next.js on Vercel; API on Fly; falls back to a recorded run of the four demo questions if the API is unreachable)
 - Repo: https://github.com/UJameel/company-brain-hackathon
 - Fictional company repo (live GitHub source + write-back target): https://github.com/UJameel/northwind-atlas
 - Respan traces: platform.respan.ai, workspace ask-luca, workflow `pantheon.ask`
