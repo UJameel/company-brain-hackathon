@@ -83,6 +83,23 @@ def test_ask_scores_with_scope_derived_grant(client, monkeypatch):
     assert r.json()["themis"]["fact_score"] == 1.0 and r.json()["cost_usd"] == 0.000015
 
 
+def test_decline_all_clears_every_pending_proposal(client, monkeypatch):
+    pend = [{"id": "a1", "user": "bob", "tool": "request_access", "input": {}, "status": "proposed"},
+            {"id": "a2", "user": "alice", "tool": "slack_send_message", "input": {}, "status": "proposed"}]
+    monkeypatch.setattr(server.hephaestus, "pending", lambda user_key=None: [p for p in pend if p["status"] == "proposed" and user_key in (None, p["user"])])
+    monkeypatch.setattr(server.hephaestus, "get", lambda action_id: next((p for p in pend if p["id"] == action_id), None))
+
+    async def decide(action_id, decision, note=None, dry_run=True):
+        p = next(p for p in pend if p["id"] == action_id); p["status"] = "declined"
+        return {"decision": decision, "action": p}
+
+    monkeypatch.setattr(server.hephaestus, "decide", decide)
+    assert client.post("/actions/decline-all").status_code == 401
+    r = client.post("/actions/decline-all", headers={"X-Demo-Key": "k"})
+    assert r.status_code == 200 and r.json() == {"declined": ["a1", "a2"]}
+    assert client.get("/actions").json() == []
+
+
 def test_health_reports_mode(client):
     r = client.get("/health")
     assert r.status_code == 200 and r.json()["ok"] is True and r.json()["users"] == ["alice", "bob"]

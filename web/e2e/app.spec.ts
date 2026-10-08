@@ -38,7 +38,7 @@ test("the grant beat works in recorded mode", async ({ page }) => {
 
 test("an explicit request shows what Pantheon wants to do", async ({ page }) => {
   await signIn(page, "alice");
-  await page.getByRole("button", { name: "Open an issue for Marco" }).click();
+  await page.getByRole("button", { name: "Open an issue for the $59 price" }).click();
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(page.getByText("Pantheon wants to")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Open a GitHub issue", { exact: true })).toBeVisible();

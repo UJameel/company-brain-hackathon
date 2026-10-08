@@ -138,6 +138,19 @@ def actions(user: User | None = None, history: bool = False) -> list[dict]:
     return [e for e in latest.values() if user is None or e["user"] == user]
 
 
+@app.post("/actions/decline-all", dependencies=[Depends(demo_key)])
+async def decline_all() -> dict:
+    """Demo reset: decline every pending proposal for every user, in-process (the CLI cannot
+    write the decision memory while this server holds the graph lock)."""
+    declined: list[str] = []
+    for p in list(hephaestus.pending(None)):
+        async with _locks[p["user"]]:
+            out = await hephaestus.decide(p["id"], "decline", "cleared before the demo")
+        if "error" not in out:
+            declined.append(p["id"])
+    return {"declined": declined}
+
+
 @app.post("/actions/{action_id}/decide", dependencies=[Depends(demo_key)])
 async def decide(action_id: str, body: DecideBody) -> dict:
     user = (hephaestus.get(action_id) or {}).get("user", "alice")

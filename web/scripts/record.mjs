@@ -8,7 +8,7 @@ const QUESTIONS = [
   "What is blocking PR #3, who owns it, and which issue tracks the blocker?",
   "What will the Pro plan cost after the Atlas launch?",
   "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?",
-  "Open a GitHub issue asking Marco to add exponential backoff to the Paddle webhook handler so PR #3 can merge.",
+  "Open a GitHub issue asking Bob to switch the pricing page to $59 on launch day, October 21.",
 ];
 const norm = (q) => q.trim().split(/\s+/).join(" ").toLowerCase();
 const post = (p, b, h = {}) => fetch(`${API}${p}`, { method: "POST", headers: { "content-type": "application/json", ...h }, body: JSON.stringify(b) }).then((r) => r.json());

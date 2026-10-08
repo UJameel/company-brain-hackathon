@@ -5,7 +5,7 @@ export const SCENARIOS = [
   { label: "What's blocking PR #3?", q: "What is blocking PR #3, who owns it, and which issue tracks the blocker?" },
   { label: "What will Pro cost after launch?", q: "What will the Pro plan cost after the Atlas launch?" },
   { label: "Is the launch date at risk?", q: "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?" },
-  { label: "Open an issue for Marco", q: "Open a GitHub issue asking Marco to add exponential backoff to the Paddle webhook handler so PR #3 can merge." },
+  { label: "Open an issue for the $59 price", q: "Open a GitHub issue asking Bob to switch the pricing page to $59 on launch day, October 21." },
 ];
 
 export function Composer({ busy, onSend }: { busy: boolean; onSend: (q: string) => void }) {

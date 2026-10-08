@@ -27,7 +27,9 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
   };
   const settled = proposal.status !== "proposed";
   const link = settled ? resultUrl(proposal.result) : null;
-  const STATUS: Record<string, string> = { proposed: "waiting for you", executed: "done", "approved-dry-run": "approved (dry run, nothing sent)", declined: "declined", revised: "revised" };
+  const STATUS: Record<string, string> = { proposed: "waiting for you", executed: "done", "approved-dry-run": "approved (dry run, nothing sent)", declined: "declined", revised: "revised", failed: "failed" };
+  const res = (proposal.result ?? {}) as Record<string, unknown>;
+  const failure = res.status === "failed" || proposal.status === "failed" ? String(res.error ?? "the connector refused the action") : null;
   return (
     <div className={`mt-3 border px-3 py-2.5 text-[12.5px] ${settled ? "border-line" : "border-accent/50 bg-accent-dim"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -55,7 +57,8 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
           )}
         </div>
       )}
-      {link && <a className="mt-2 inline-block font-mono text-[11px] text-accent" href={link} target="_blank" rel="noreferrer">Open what was created</a>}
+      {failure && <p className="mt-2 font-mono text-[11px] text-muted">Could not do it: {failure}</p>}
+      {link && <a className="mt-2 inline-block font-mono text-[11px] text-accent" href={link} target="_blank" rel="noreferrer">{proposal.tool === "github_issue_create" ? "Open on GitHub" : "Open what was sent"}</a>}
     </div>
   );
 }
