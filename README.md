@@ -9,7 +9,7 @@ Every company-brain demo has one brain. Real companies have one brain per employ
 Same question, two people, two correct answers. Then a grant, and the difference closes. The eval watched it happen: isolation **0.99** with zero leaks, coverage **0.89 → 1.00** after the share.
 
 <p align="center">
-  <img src="docs/screenshots/app-chat-brain.png" alt="Pantheon: Alice asks what is blocking PR #3; the agents answer with sources from GitHub, Slack and Notion, propose a Slack message, and the brain lights the region of the agent at work" width="100%">
+  <img src="docs/screenshots/app-chat-brain.png" alt="Pantheon: David asks what is blocking PR #3; the agents answer with sources from GitHub, Slack and Notion, propose a Slack message, and the brain lights the region of the agent at work" width="100%">
 </p>
 
 Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07, by Usman Jameel.
@@ -27,7 +27,7 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
   <img src="docs/screenshots/landing.png" alt="Pantheon landing page: the company brain that knows who is asking" width="100%">
 </p>
 
-> **Names on screen:** the engineering lead appears as **David** and the contractor as **Goliath** in the app and the demo (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
+> **Names on screen:** the engineering lead is **David** and the contractor is **Goliath** everywhere people are named (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
 
 ## The agents (brain region → job)
 
@@ -78,7 +78,7 @@ python -m pantheon compare before after
 Live mode (your own Scalekit workspace):
 
 ```bash
-python -m pantheon sources --user alice --plan        # every system Alice connected, and what a generic pull would call
+python -m pantheon sources --user alice --plan        # every system David connected, and what a generic pull would call
 python -m pantheon ingest --user alice --live --all --github-repo <owner>/<repo> --notion-query "Launch Plan"
 python -m pantheon ask --user alice "Who owns the launch announcement? Draft them a Slack message." --execute
 python -m pantheon actions                            # proposals awaiting a decision
@@ -99,7 +99,7 @@ Closed-set decisions do not need a text-generating model at all. With `PANTHEON_
 
 ## Access story
 
-| | Alice (eng lead) | Bob (contractor) |
+| | David (eng lead) | Goliath (contractor) |
 |---|---|---|
 | Scalekit connections | Slack, GitHub (PAT) | Slack only |
 | Slack membership | #general, #engineering, **#leadership (private)** | #general, #engineering |
@@ -110,7 +110,7 @@ Closed-set decisions do not need a text-generating model at all. With `PANTHEON_
 
 ## Evaluation
 
-`evals/scenarios.json`: 15 scenarios, 9 as Alice and 6 as Bob, with `must_mention`, `must_not_mention`, `expected_sources` (Cognee `node_set` tags) and `expected_action`. Four of Bob's scenarios carry an `after_grant` block: once Alice shares her dataset, Bob is *supposed* to see more, so the expectation flips.
+`evals/scenarios.json`: 15 scenarios, 9 as David and 6 as Goliath, with `must_mention`, `must_not_mention`, `expected_sources` (Cognee `node_set` tags) and `expected_action`. Four of Goliath's scenarios carry an `after_grant` block: once David shares her dataset, Goliath is *supposed* to see more, so the expectation flips.
 
 Themis scores each run 60% deterministic fact check + 40% LLM judge. The judge is `claude-haiku-4-5`, pinned, returning structured booleans; Athena answers with `claude-sonnet-4-5`, so the judge is independent. Results land in `evals/results-<label>.json`; `compare` prints the table; `rescore` re-scores stored answers so two runs are always judged by the same judge.
 
@@ -118,9 +118,9 @@ Three numbers, because a grant changes what *correct* means:
 
 | run | brain state | expectations | what it proves |
 |---|---|---|---|
-| `before` | isolated | isolated (Bob must not see leadership facts) | **no leaks**: Bob refuses correctly |
-| `before-coverage` | isolated | full knowledge | how much of the team's questions Bob's brain can answer before the share |
-| `after` | Alice shared `alice-brain` with Bob | full knowledge | the difference closes |
+| `before` | isolated | isolated (Goliath must not see leadership facts) | **no leaks**: Goliath refuses correctly |
+| `before-coverage` | isolated | full knowledge | how much of the team's questions Goliath's brain can answer before the share |
+| `after` | David shared `alice-brain` with Goliath | full knowledge | the difference closes |
 
 ## Memory design
 

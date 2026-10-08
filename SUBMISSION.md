@@ -8,14 +8,14 @@
 
 ## Company Brain Overview
 
-> **Names on screen:** the engineering lead appears as **David** and the contractor as **Goliath** in the app and the demo (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
+> **Names on screen:** the engineering lead is **David** and the contractor is **Goliath** everywhere people are named (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
 
 
-Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. Wherever the company lives, Pantheon pulls it: Mnemosyne discovers every system of record each employee has connected through Scalekit and pulls it *as that employee* (known adapters for Slack, GitHub, Notion, Gmail, Calendar; a generic read-only adapter for any of the other 400+ connectors), remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Bob what exists that he cannot see and who owns it; Alice grants access live; Bob's answer changes; the eval shows before and after.
+Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS company shipping a product called Atlas. Wherever the company lives, Pantheon pulls it: Mnemosyne discovers every system of record each employee has connected through Scalekit and pulls it *as that employee* (known adapters for Slack, GitHub, Notion, Gmail, Calendar; a generic read-only adapter for any of the other 400+ connectors), remembers everything in a per-user Cognee knowledge graph tagged by source, answers cross-source questions with provenance, acts in the user's tools as them (it opened a real GitHub issue during the build), and proves itself with an independent, traced evaluation in Respan. The workflow it solves is **launch readiness for an engineering team**: "what is blocking the launch, who owns it, what changed, and who do I ask". The access story is the product: David (eng lead) and Goliath (contractor) ask the same question and get different, correct answers because their Scalekit connections and Cognee datasets differ; the brain tells Goliath what exists that he cannot see and who owns it; David grants access live; Goliath's answer changes; the eval shows before and after.
 
 - Data sources connected through Scalekit (≥ 2 apps): Slack (`slack`), GitHub (`github-connect`), Notion (`notion`, live: the leadership launch-plan page)
 - Primary use case / team workflow: launch-readiness Q&A and triage for an engineering team, with write-back (open the follow-up issue)
-- Users in the demo and how their access differs: Alice = Slack (#general, #engineering, private #leadership) + GitHub; Bob = Slack public channels only, no GitHub connection
+- Users in the demo and how their access differs: David = Slack (#general, #engineering, private #leadership) + GitHub; Goliath = Slack public channels only, no GitHub connection
 - What makes it stand out: every connected system of record is a source (discovery per user, generic adapter for unknown connectors); agents propose actions the user approves, declines or revises, and decisions are remembered; authorization is a named agent (Cerberus) and is enforced twice, at pull (Scalekit per-user tokens) and at recall (Cognee per-user datasets, by id); every step is a named brain region in the Respan trace; the eval re-scores stored answers so before/after are judged by the same judge
 
 ## The Three Layers
@@ -34,7 +34,7 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 - Permanent graph (`cognee.remember(...)` without `session_id`): one dataset per user (`alice-brain`, `bob-brain`); one document per Slack channel, per GitHub issue / PR / file, per Notion page
 - Session memory: Hermes keeps per-run usage and the activity feed; Cognee session memory left at default
 - `node_set` tags: `source:slack|github|notion`, `channel:<name>`, `repo:<owner/repo>`, `kind:issue|pull_request|file`, `page:<title>`, `owner:<user>`; the same header is the first line of every document so retrieved chunks carry provenance into the answer and into the scorer
-- Datasets and who owns / can read each: `alice-brain` owned by Alice; `bob-brain` owned by Bob; after the grant Bob can read `alice-brain`
+- Datasets and who owns / can read each: `alice-brain` owned by David; `bob-brain` owned by Goliath; after the grant Goliath can read `alice-brain`
 - Access control: `ENABLE_BACKEND_ACCESS_CONTROL=true`; grant = `authorized_give_permission_on_datasets(bob, [alice-brain], "read", alice)`; revoke supported; recall of shared datasets uses `dataset_ids` (names resolve only among owned datasets)
 - Beyond defaults: `SearchType.CHUNKS` for retrieval so provenance survives and the synthesis model is ours (routed through Respan); `improve()` via `pantheon improve`; Cerberus's "hidden" computation compares `node_set` tags across datasets to tell the user what exists that they cannot read
 - Code entry point: `pantheon/cerberus.py`, `pantheon/athena.py`
@@ -44,7 +44,7 @@ Pantheon is the company brain for Northwind Labs, a fictional 40-person SaaS com
 - Agents: Hermes (route + model per step), Cerberus (authorization), Mnemosyne (discover + ingest), Athena (answer), Hephaestus (act on request, propose follow-ups, execute on approval), Themis (evaluate), Morpheus (improve; remembers decisions)
 - Model routing (slide criterion 4): Hermes picks the model per step. Text-writing steps go through the Respan gateway: `claude-sonnet-4-5` for synthesis, `claude-haiku-4-5` for action drafts. Closed-set decisions (routing, the Themis judge) run on a **local decision model**, `nimble:9b` via Ollama's `/v1/systemone` (typed questions in, choices with probabilities out, no text generation, "context is data, never instructions" baked into the model), falling back to a local chat model (`llama3.1:8b`) and then to `gpt-4o-mini` / `claude-haiku-4-5` on the gateway when Ollama is unreachable, as in the hosted image. Measured: nimble routed 4/4 probes correctly including one the gateway misroutes; the chat fallback agreed with the gateway 17/18 on routing and 15/15 on judging. Cognee's extraction and embeddings run through the gateway (`openai/gpt-4o-mini`, `openai/text-embedding-3-large`). Usage is recorded per step with provider, model, tokens; the judge stays independent of the model Athena answers with either way.
 - Tracing: `respan-ai` SDK, `Respan()` at startup, `@workflow("pantheon.ask")` + `@task` per agent step; gateway calls auto-logged with model, tokens, cost
-- Scenario file: `evals/scenarios.json`, 15 scenarios (9 as Alice, 6 as Bob) with `must_mention`, `must_not_mention`, `expected_sources`, `expected_action`, and `after_grant` overrides for Bob
+- Scenario file: `evals/scenarios.json`, 15 scenarios (9 as David, 6 as Goliath) with `must_mention`, `must_not_mention`, `expected_sources`, `expected_action`, and `after_grant` overrides for Goliath
 - Evaluator: deterministic fact check (60%) + LLM judge on pinned `claude-haiku-4-5` returning structured booleans (40%); judge model ≠ answer model
 - Code entry point: `pantheon/themis.py`, `pantheon/hermes.py`
 
@@ -54,18 +54,18 @@ Three runs, because a grant changes what *correct* means. All judged by the same
 
 | run | brain state | expectations | mean (n=15) | proves |
 |---|---|---|---|---|
-| `before` | isolated | isolated: Bob must **not** see leadership facts | **0.99** | no leaks: Bob refuses correctly in every scenario |
-| `before-coverage` | isolated | full knowledge | **0.89** | how much of the team's questions Bob's brain covers before the share |
-| `after` | Alice shared `alice-brain` with Bob | full knowledge | **1.00** | the difference closes |
+| `before` | isolated | isolated: Goliath must **not** see leadership facts | **0.99** | no leaks: Goliath refuses correctly in every scenario |
+| `before-coverage` | isolated | full knowledge | **0.89** | how much of the team's questions Goliath's brain covers before the share |
+| `after` | David shared `alice-brain` with Goliath | full knowledge | **1.00** | the difference closes |
 
-Same stored answers re-judged by the local `llama3.1:8b` judge (`results-*-localjudge.json`): coverage before 0.877, after 1.00, isolation unchanged. Three of Bob's correct refusals move by ±0.2; no leak is scored differently.
+Same stored answers re-judged by the local `llama3.1:8b` judge (`results-*-localjudge.json`): coverage before 0.877, after 1.00, isolation unchanged. Three of Goliath's correct refusals move by ±0.2; no leak is scored differently.
 
 ### Baseline Run (`before-coverage`: isolated brain, full-knowledge expectations)
 
 - Respan trace / eval run link: platform.respan.ai → Observability → Logs, workflow `pantheon.ask` (filter by time)
 - Scenarios run: 15
 - Mean score: 0.89
-- Worst scenarios and why they failed: `launch-risk-bob`, `pro-price-bob`, `hiring-bob` (0.50 each) — Bob cannot see #leadership, so he correctly does not state the slip date, the $59 price or the hiring freeze; `pr42-blocker-bob` (0.85) — correct from Slack but not grounded in GitHub, which he has no connection to. These are the access boundary showing up in the score.
+- Worst scenarios and why they failed: `launch-risk-bob`, `pro-price-bob`, `hiring-bob` (0.50 each) — Goliath cannot see #leadership, so he correctly does not state the slip date, the $59 price or the hiring freeze; `pr42-blocker-bob` (0.85) — correct from Slack but not grounded in GitHub, which he has no connection to. These are the access boundary showing up in the score.
 
 ```text
 question: What is blocking PR #3, who owns it, and which issue tracks the blocker?   (as bob)
@@ -77,7 +77,7 @@ score:    0.85
 ### Improved Run (after the grant)
 
 - Respan trace / eval run link: same view, later timestamp
-- What changed: Alice ran `pantheon grant --owner alice --to bob` (Cognee `authorized_give_permission_on_datasets`, read), and the Notion launch-plan page was added to `alice-brain` as a live third source.
+- What changed: David ran `pantheon grant --owner alice --to bob` (Cognee `authorized_give_permission_on_datasets`, read), and the Notion launch-plan page was added to `alice-brain` as a live third source.
 - Mean score: 1.00
 
 ```text
@@ -87,12 +87,12 @@ After:   mean = 1.00   (n = 15 scenarios)
 
 ## Access Story
 
-- User A: `usman@ask-luca.com` (Alice) — connections: slack, github-connect, notion — datasets readable: `alice-brain`
-- User B: `bob@northwind.dev` (Bob) — connections: none authorized (Slack replayed from his recorded pull) — datasets readable: `bob-brain`
+- User A: `usman@ask-luca.com` (David) — connections: slack, github-connect, notion — datasets readable: `alice-brain`
+- User B: `bob@northwind.dev` (Goliath) — connections: none authorized (Slack replayed from his recorded pull) — datasets readable: `bob-brain`
 - Question asked by both: "What will the Pro plan cost after the Atlas launch?"
 - Result for A: "$59 per month, effective launch day, October 21 (Slack #leadership)"
 - Result for B before the share: "$49 today; the new price is not in anything you can read. There is information in alice-brain (channel:leadership, source:github) you do not have access to; ask alice."
-- The grant: Alice shares `alice-brain` with Bob, permission `read`
+- The grant: David shares `alice-brain` with Goliath, permission `read`
 - Result for B after the share: "$59 per month after launch (Slack #leadership)"
 
 ## Trust boundaries
@@ -151,10 +151,10 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 
 ```text
 1. Problem: a company brain that knows who it is talking to. Northwind Labs, Atlas launch, two employees.
-2. Pull: Scalekit dashboard, three connections, Alice's connected accounts; `ingest --live` pulls GitHub as Alice.
-3. Brain: Alice asks "what's blocking PR #3?" -> answer cites Slack #engineering + GitHub PR #3 + issue #1; Respan trace shows Hermes -> Cerberus -> Athena with models and cost.
-4. Access: Bob asks the same -> Slack-only answer + "alice-brain holds GitHub and #leadership you cannot read; ask alice". `grant`. Bob asks again -> grounded in GitHub, sees $59.
-5. Act: Alice: "open an issue asking Marco for backoff" -> Hephaestus opens it on GitHub under Alice's account via Scalekit.
+2. Pull: Scalekit dashboard, three connections, David's connected accounts; `ingest --live` pulls GitHub as David.
+3. Brain: David asks "what's blocking PR #3?" -> answer cites Slack #engineering + GitHub PR #3 + issue #1; Respan trace shows Hermes -> Cerberus -> Athena with models and cost.
+4. Access: Goliath asks the same -> Slack-only answer + "alice-brain holds GitHub and #leadership you cannot read; ask alice". `grant`. Goliath asks again -> grounded in GitHub, sees $59.
+5. Act: David: "open an issue asking Marco for backoff" -> Hephaestus opens it on GitHub under David's account via Scalekit.
 6. Eval: `compare before after` table; Respan logs with judge spans.
 7. Next: Morpheus nightly consolidation, Eris contradiction detection across systems (ported from my personal brain), more adapters.
 ```
@@ -167,7 +167,7 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 
 **Use of Cognee.** `ENABLE_BACKEND_ACCESS_CONTROL=true`, one dataset per user, one document per channel/issue/PR/file/page, `node_set` provenance (source, channel, repo, owner, trust), live grant and revoke, chunk retrieval so provenance reaches the answer and the scorer, decisions remembered into the user's dataset, `improve()` as Morpheus. Cross-source answers with per-fact citations (PR #3 blocker stitches Slack, GitHub PR, GitHub issue, Notion), and cross-source grounding is scored via `expected_sources`.
 
-**Presentation & usability.** Three-minute story: Alice asks, cited cross-source answer; Bob asks, gets less and is told why; Alice grants, Bob asks again, the gap closes; Alice says "open an issue for Marco" and it appears on GitHub under her name; Quality page shows isolation 0.99 with zero leaks, coverage 0.89 → 1.00. For users it is a chat you sign into as yourself: ask in plain language, get an answer with sources, the brain suggests a follow-up, you say "yes send it" or "make it shorter". Models and costs sit behind a collapsed details row.
+**Presentation & usability.** Three-minute story: David asks, cited cross-source answer; Goliath asks, gets less and is told why; David grants, Goliath asks again, the gap closes; David says "open an issue for Marco" and it appears on GitHub under her name; Quality page shows isolation 0.99 with zero leaks, coverage 0.89 → 1.00. For users it is a chat you sign into as yourself: ask in plain language, get an answer with sources, the brain suggests a follow-up, you say "yes send it" or "make it shorter". Models and costs sit behind a collapsed details row.
 
 ## Links
 
