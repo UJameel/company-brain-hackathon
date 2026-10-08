@@ -105,6 +105,10 @@ def _target_is_known(tool: str, inp: dict, hidden: dict) -> bool:
         return inp.get("owner") in config.USERS and inp.get("dataset") in config.load_state().get("datasets", {})
     if tool == "slack_send_message":
         known_channels = {t.split(":", 1)[1] for d in config.load_state().get("datasets", {}).values() for t in d.get("tags", []) if t.startswith("channel:")}
+        # Channels the operator explicitly allows for a live demo (the Scalekit connection may be bound to a
+        # workspace other than the fictional company's). Comma-separated, no '#'.
+        import os
+        known_channels |= {c.strip().lstrip("#") for c in os.environ.get("PANTHEON_SLACK_EXTRA_CHANNELS", "").split(",") if c.strip()}
         ch = str(inp.get("channel", "")).lstrip("#")
         return ch in known_channels
     if tool == "github_issue_create":
@@ -120,8 +124,20 @@ def act(user_key: str, tool_name: str, tool_input: dict, connection_name: str, d
         return {"tool": tool_name, "status": "dry-run", "as_user": identifier, "input": tool_input}
     from .mnemosyne import _actions
 
-    res = _actions().execute_tool(tool_name=tool_name, tool_input=tool_input, connection_name=connection_name, identifier=identifier)
-    return {"tool": tool_name, "status": "executed", "as_user": identifier, "input": tool_input, "result": str(res.data)[:300]}
+    actions = _actions()
+    try:
+        res = actions.execute_tool(tool_name=tool_name, tool_input=tool_input, connection_name=connection_name, identifier=identifier)
+    except Exception as e:
+        msg = str(e).splitlines()[0]
+        if tool_name == "slack_send_message" and "not_in_channel" in msg:
+            # Slack requires membership to post; join as the user, then retry once.
+            actions.execute_tool(tool_name="slack_join_conversation", tool_input={"channel": tool_input["channel"]}, connection_name=connection_name, identifier=identifier)
+            res = actions.execute_tool(tool_name=tool_name, tool_input=tool_input, connection_name=connection_name, identifier=identifier)
+        else:
+            return {"tool": tool_name, "status": "failed", "as_user": identifier, "input": tool_input, "error": msg[:200]}
+    data = res.data if isinstance(res.data, dict) else {}
+    link = data.get("html_url") or (f"https://github.com/{tool_input.get('owner')}/{tool_input.get('repo')}/issues/{int(data['number'])}" if tool_name == "github_issue_create" and data.get("number") else None)
+    return {"tool": tool_name, "status": "executed", "as_user": identifier, "input": tool_input, "result": str(res.data)[:300], "link": link}
 
 
 def _execute_proposal(p: dict, dry_run: bool) -> dict:
