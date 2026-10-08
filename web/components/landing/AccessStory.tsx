@@ -1,8 +1,8 @@
 import { Reveal } from "./Reveal";
 const BEATS = [
-  { k: "before", h: "Isolation", p: "Bob is a contractor with Slack only. He asks about the Atlas launch risk.", ex: ["Cerberus: bob may read ['bob-brain']; hidden ['alice-brain']", "Athena: 3 passages from ['source:slack']", "~October 28 fallback: not in Bob's answer"] },
-  { k: "the grant", h: "Alice shares", p: "Alice grants Bob read on her dataset. Cognee records the permission, performed as Alice.", ex: ["cerberus.grant(owner=\"alice\", to=\"bob\")", "*alice granted read on alice-brain to bob"], lit: true },
-  { k: "after", h: "Changed result", p: "Same question, re-asked. Bob's answer is grounded in GitHub and Notion too, and the eval moves.", ex: ["Cerberus: bob may read ['alice-brain', 'bob-brain']", "Athena: 7 passages from ['source:github', 'source:notion', 'source:slack']", "*coverage 0.89 to 1.00"] },
+  { k: "before", h: "Isolation", p: "A contractor with only Slack connected asks about the launch risk.", ex: ["Cerberus: may read ['contractor-brain']; hidden ['lead-brain']", "Athena: 3 passages from ['source:slack']", "~The fallback date: not in the answer"] },
+  { k: "the grant", h: "The lead shares", p: "The engineering lead grants the contractor read on their dataset. Cognee records the permission, performed as the lead.", ex: ["cerberus.grant(owner=lead, to=contractor)", "*lead granted read on lead-brain to contractor"], lit: true },
+  { k: "after", h: "Changed result", p: "Same question, re-asked. The answer is grounded in GitHub and Notion too, and the eval moves.", ex: ["Cerberus: may read ['lead-brain', 'contractor-brain']", "Athena: 7 passages from ['source:github', 'source:notion', 'source:slack']", "*coverage 0.89 to 1.00"] },
 ];
 export function AccessStory() {
   return (
