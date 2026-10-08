@@ -1,10 +1,23 @@
-# Pantheon — a Company Brain run by named agents
+# Pantheon
 
-> Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07. Solo entry by Usman Jameel. **Live app:** https://company-brain-hackathon.vercel.app
+**The company brain that knows who is asking.**
 
-Pantheon is a company brain for a fictional 40-person SaaS company, **Northwind Labs**. Wherever the company lives, Pantheon pulls it: every system of record an employee has connected through Scalekit (400+ connectors: Slack, GitHub, Notion, Gmail, Calendar, Drive, Linear, Jira, HubSpot and the rest) is pulled *as that employee*, remembered in their per-user knowledge graph (Cognee), and queried with provenance. The more systems you connect, the better the brain gets. It acts in your tools as you, proposes follow-up actions you approve, decline or revise, and proves it works with an independent, traced evaluation (Respan).
+[![Live app](https://img.shields.io/badge/live-company--brain--hackathon.vercel.app-c8602c)](https://company-brain-hackathon.vercel.app) [![Submission](https://img.shields.io/badge/submission-PR%20%2355-blue)](https://github.com/topoteretes/cognee-hackathons/pull/55) ![Eval](https://img.shields.io/badge/isolation-0.99%20no%20leaks-success) ![Eval](https://img.shields.io/badge/coverage-0.89%20%E2%86%92%201.00-success) ![Tests](https://img.shields.io/badge/tests-api%2033%20%C2%B7%20web%2038%20%C2%B7%20e2e%2014-informational)
 
-The twist: **every employee gets their own view of the brain.** Alice (eng lead) and Bob (contractor) ask the same question and get different, correct answers, because their Scalekit connections and their Cognee datasets differ. The brain tells Bob what exists that he cannot see and who to ask. Then Alice grants access live, and Bob's answer changes. The eval shows the before and after.
+Every company-brain demo has one brain. Real companies have one brain per employee, because people are allowed to know different things. Pantheon pulls every system your company lives in *as each employee* through Scalekit, remembers it in that person's own knowledge graph in Cognee, answers with sources, tells you what exists that you cannot see and who to ask, proposes the next action and lets you approve, decline or revise it in the chat, and proves all of it with a traced, independent evaluation in Respan.
+
+Same question, two people, two correct answers. Then a grant, and the difference closes. The eval watched it happen: isolation **0.99** with zero leaks, coverage **0.89 → 1.00** after the share.
+
+Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07, by Usman Jameel.
+
+### Why it is different
+
+- **Authorization is an agent, not a filter.** Cerberus lines up Scalekit's per-user tokens (what you may pull) with Cognee's per-user datasets (what you may recall), and says out loud what you are missing.
+- **Every system of record.** Mnemosyne discovers what you connected and pulls it, with adapters for Slack, GitHub, Notion, Gmail and Calendar and a generic read-only adapter for the other 400+ connectors.
+- **Actions you approve in the chat.** Hephaestus proposes; you say "yes send it", "no", or "make it shorter". Decisions are remembered, so the brain learns how you work.
+- **Nothing it reads is trusted.** Passages are data, external sources are tagged, proposal targets are validated, and a planted prompt-injection scenario is in the eval.
+- **The right model per step.** A local decision model (nimble:9b) for routing and judging, frontier models through the gateway only where text is written, every call visible with provider, model and cost.
+- **Seven agents, named for brain regions**, so the architecture reads in one glance and lights up in the UI as it works.
 
 ## The agents (brain region → job)
 

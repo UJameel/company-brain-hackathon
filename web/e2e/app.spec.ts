@@ -43,6 +43,15 @@ test("unknown question in recorded mode explains itself", async ({ page }) => {
   await expect(page.getByText(/No recorded answer/)).toBeVisible();
 });
 
+test("graph and connections pages work from the recording", async ({ page }) => {
+  await signIn(page, "alice");
+  await page.goto("/app/graph");
+  await expect(page.getByText(/\d+ nodes · \d+ edges · recorded snapshot/)).toBeVisible({ timeout: 20_000 });
+  await page.goto("/app/connections");
+  await expect(page.getByText("GitHub")).toBeVisible();
+  await expect(page.getByRole("button", { name: /needs the live brain/ })).toBeDisabled();
+});
+
 test("quality page shows the three numbers and the brain status", async ({ page }) => {
   await signIn(page, "alice");
   await page.goto("/app/quality");

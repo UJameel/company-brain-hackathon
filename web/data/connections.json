@@ -1,0 +1,26 @@
+{
+  "alice": [
+    {
+      "connection": "notion",
+      "provider": "NOTION",
+      "status": "ACTIVE",
+      "adapter": "known",
+      "link": null
+    },
+    {
+      "connection": "github-connect",
+      "provider": "GITHUB",
+      "status": "ACTIVE",
+      "adapter": "known",
+      "link": null
+    },
+    {
+      "connection": "slack",
+      "provider": "SLACK",
+      "status": "ACTIVE",
+      "adapter": "known",
+      "link": null
+    }
+  ],
+  "bob": []
+}

@@ -1,7 +1,9 @@
 "use client";
 import { api } from "@/lib/api";
 import { layoutGraph, sourceTone, type LaidOut } from "@/lib/brain/layout";
+import { recordedGraphFor } from "@/lib/recordedExtras";
 import { useSession, useUser } from "@/lib/session";
+import { sourceName } from "@/lib/steps";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 
@@ -12,23 +14,23 @@ export function GraphView() {
   const [g, setG] = useState<LaidOut | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    if (s.mode !== "live") return;
+    if (s.mode === "checking") return;
     setG(null); setErr(null);
-    api.graph(me).then(layoutGraph).then(setG).catch((e) => setErr((e as Error).message));
-  }, [me, s.mode, s.grants]);
+    const source = s.mode === "live" ? api.graph(me) : Promise.resolve(recordedGraphFor(me, s.granted(me)));
+    source.then(layoutGraph).then(setG).catch((e) => setErr((e as Error).message));
+  }, [me, s.mode, s.grants, s]);
   const sources = useMemo(() => { const order: string[] = []; g?.nodes.forEach((n) => n.node_set.filter((t) => t.startsWith("source:")).forEach((t) => sourceTone(t, order))); return order; }, [g]);
   const datasets = useMemo(() => { const m = new Map<string, number>(); g?.nodes.forEach((n) => m.set(n.dataset ?? "?", (m.get(n.dataset ?? "?") ?? 0) + 1)); return [...m]; }, [g]);
-  if (s.mode !== "live") return <div className="p-6 text-fg-2">The graph view needs the live API. In recorded mode there is no graph to draw.</div>;
   return (
     <div className="grid h-full lg:grid-cols-[260px_1fr]">
       <aside className="border-r border-line p-5 font-mono text-[12px]">
         <div className="insc mb-3 text-[11px]">Datasets you can read</div>
         {datasets.map(([d, n]) => <div key={d} className="flex justify-between py-1 text-fg-2"><span>{d}</span><span className="num">{n}</span></div>)}
         <div className="insc mb-3 mt-6 text-[11px]">Sources</div>
-        {sources.map((t) => <div key={t} className="py-1 text-fg-2">{t}</div>)}
+        {sources.map((t) => <div key={t} className="py-1 text-fg-2">{sourceName(t)}</div>)}
         {err && <p className="mt-6 text-muted">Could not load the graph: {err}</p>}
         {!g && !err && <p className="mt-6 text-muted">Laying out the graph</p>}
-        {g && <p className="mt-6 text-muted">{g.nodes.length} nodes · {g.edges.length} edges</p>}
+        {g && <p className="mt-6 text-muted">{g.nodes.length} nodes · {g.edges.length} edges{s.mode === "recorded" ? " · recorded snapshot" : ""}</p>}
       </aside>
       <div className="relative min-h-[480px]">{g && <Brain mode="graph" graph={g} activeRegion="sleep" className="h-full w-full" />}</div>
     </div>
