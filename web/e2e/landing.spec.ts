@@ -16,3 +16,13 @@ test("scrolling the pantheon lights each agent label", async ({ page }) => {
     await expect(page.locator(".insc").filter({ hasText: god }).first()).toBeVisible();
   }
 });
+
+test("the three layers are drawn as one figure with four steps", async ({ page }) => {
+  await page.goto("/#layers");
+  const steps = page.locator("#layers ol li");
+  await expect(steps).toHaveCount(4);
+  await expect(steps.nth(3)).toContainText("Respan");
+  const figure = page.getByRole("img", { name: /how the three layers connect/i });
+  if (test.info().project.name === "desktop") await expect(figure).toBeVisible();
+  else await expect(figure).toBeHidden();
+});

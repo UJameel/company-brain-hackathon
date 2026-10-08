@@ -1,3 +1,4 @@
+import { Flow } from "./Flow";
 import { Reveal } from "./Reveal";
 const LAYERS = [
   ["Scalekit", "identity and connections", "Pulls from every system of record through the user's own connected accounts, any of 400+ connectors, and takes actions as them. No shared tokens anywhere."],
@@ -17,6 +18,11 @@ export function Layers() {
           </Reveal>
         ))}
       </div>
+      <Reveal className="mt-24">
+        <div className="insc mb-3">How they connect</div>
+        <p className="max-w-[56ch] text-[17px] text-fg-2">One loop. Scalekit brings each system in as the person, Cognee remembers it in their own graph, Respan watches every call and scores the result.</p>
+      </Reveal>
+      <Reveal delay={0.1} className="mt-10"><Flow /></Reveal>
     </section>
   );
 }
