@@ -8,6 +8,10 @@ Every company-brain demo has one brain. Real companies have one brain per employ
 
 Same question, two people, two correct answers. Then a grant, and the difference closes. The eval watched it happen: isolation **0.99** with zero leaks, coverage **0.89 → 1.00** after the share.
 
+<p align="center">
+  <img src="docs/screenshots/app-chat-brain.png" alt="Pantheon: Alice asks what is blocking PR #3; the agents answer with sources from GitHub, Slack and Notion, propose a Slack message, and the brain lights the region of the agent at work" width="100%">
+</p>
+
 Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company Brain" hackathon, SF Tech Week, 2026-10-07, by Usman Jameel.
 
 ### Why it is different
@@ -18,6 +22,10 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
 - **Nothing it reads is trusted.** Passages are data, external sources are tagged, proposal targets are validated, and a planted prompt-injection scenario is in the eval.
 - **The right model per step.** A local decision model (nimble:9b) for routing and judging, frontier models through the gateway only where text is written, every call visible with provider, model and cost.
 - **Seven agents, named for brain regions**, so the architecture reads in one glance and lights up in the UI as it works.
+
+<p align="center">
+  <img src="docs/screenshots/landing.png" alt="Pantheon landing page: the company brain that knows who is asking" width="100%">
+</p>
 
 ## The agents (brain region → job)
 
