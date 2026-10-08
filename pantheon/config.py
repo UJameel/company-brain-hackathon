@@ -35,6 +35,21 @@ def display(user_key: str) -> str:
     return DISPLAY_NAMES.get(user_key, user_key)
 
 
+def resolve_user(name: str) -> str:
+    """Accept a user key ("alice") or a display name ("David", "goliath"), case-insensitive,
+    and return the key. Raises ValueError for anything else."""
+    n = (name or "").strip().lower()
+    if n in USERS:
+        return n
+    for key, shown in DISPLAY_NAMES.items():
+        if shown.lower() == n:
+            return key
+    raise ValueError(f"unknown user {name!r}; try one of {sorted(USERS)} or {sorted(DISPLAY_NAMES.values())}")
+
+
+USER_CHOICES = sorted(set(USERS) | {v.lower() for v in DISPLAY_NAMES.values()})
+
+
 def dataset_for(user_key: str) -> str:
     return f"{user_key}-brain"
 

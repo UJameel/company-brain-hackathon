@@ -14,3 +14,11 @@ def test_decision_candidates_are_only_the_latest_turn(monkeypatch):
     finally:
         hermes._route_user.pop()
     assert ids == ["new2", "new1"]
+
+
+def test_resolve_user_accepts_keys_and_display_names():
+    from pantheon import config
+
+    assert config.resolve_user("alice") == "alice"
+    assert config.resolve_user("David") == "alice"
+    assert config.resolve_user("GOLIATH") == "bob"

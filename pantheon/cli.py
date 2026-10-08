@@ -13,7 +13,7 @@ def main() -> None:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     i = sub.add_parser("ingest", help="Mnemosyne: pull as each user and remember into their dataset")
-    i.add_argument("--user", choices=list(config.USERS), action="append")
+    i.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, action="append")
     i.add_argument("--live", action="store_true", help="pull through Scalekit (default: replay sample_data/)")
     i.add_argument("--channel", action="append", default=None)
     i.add_argument("--github-repo", default=None)
@@ -21,28 +21,28 @@ def main() -> None:
     i.add_argument("--all", action="store_true", help="pull EVERY system the user has connected through Scalekit (live only)")
 
     so = sub.add_parser("sources", help="Mnemosyne: list the systems of record a user has connected, and what a generic pull would call")
-    so.add_argument("--user", choices=list(config.USERS), default="alice")
+    so.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, default="alice")
     so.add_argument("--plan", action="store_true", help="show the read-only tools the generic adapter would call per connection")
 
     a = sub.add_parser("ask", help="Hermes -> Cerberus -> Athena (-> Hephaestus)")
-    a.add_argument("--user", choices=list(config.USERS), required=True)
+    a.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, required=True)
     a.add_argument("question")
     a.add_argument("--execute", action="store_true", help="really execute actions via Scalekit (default dry-run)")
 
     g = sub.add_parser("grant", help="Cerberus: owner shares their dataset with another user")
-    g.add_argument("--owner", choices=list(config.USERS), required=True)
-    g.add_argument("--to", choices=list(config.USERS), required=True)
+    g.add_argument("--owner", choices=config.USER_CHOICES, type=str.lower, required=True)
+    g.add_argument("--to", choices=config.USER_CHOICES, type=str.lower, required=True)
 
     gr = sub.add_parser("grants", help="Cerberus: live shares, read from Cognee")
 
     rv = sub.add_parser("revoke", help="Cerberus: owner revokes a share")
-    rv.add_argument("--owner", choices=list(config.USERS), required=True)
-    rv.add_argument("--to", choices=list(config.USERS), required=True)
+    rv.add_argument("--owner", choices=config.USER_CHOICES, type=str.lower, required=True)
+    rv.add_argument("--to", choices=config.USER_CHOICES, type=str.lower, required=True)
 
     e = sub.add_parser("eval", help="Themis: run scenarios, score, write evals/results-<label>.json")
     e.add_argument("--label", required=True)
     e.add_argument("--no-judge", action="store_true")
-    e.add_argument("--only-user", choices=list(config.USERS))
+    e.add_argument("--only-user", choices=config.USER_CHOICES, type=str.lower)
     e.add_argument("--stage", choices=["isolated", "after-grant"], default="isolated")
     e.add_argument("--ids", default=None, help="comma-separated scenario ids to run")
 
@@ -56,7 +56,7 @@ def main() -> None:
     c.add_argument("after")
 
     z = sub.add_parser("authorize", help="Print the Scalekit consent link for a user and connection")
-    z.add_argument("--user", choices=list(config.USERS), required=True)
+    z.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, required=True)
     z.add_argument("--connection", default=None, help="connection name (default: slack and github)")
 
     s_ = sub.add_parser("seed", help="Post the Northwind transcripts into the real Slack workspace, as Alice")
@@ -64,13 +64,13 @@ def main() -> None:
 
     t_ = sub.add_parser("tools", help="List the tools a user's connected account can call")
     t_.add_argument("--connection", required=True)
-    t_.add_argument("--user", choices=list(config.USERS), default="alice")
+    t_.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, default="alice")
 
     v = sub.add_parser("mcp", help="Scalekit Virtual MCP server: ensure it exists and mint a session token for a user")
-    v.add_argument("--user", choices=list(config.USERS), default="alice")
+    v.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, default="alice")
 
     ac = sub.add_parser("actions", help="Hephaestus: list proposed actions awaiting a decision")
-    ac.add_argument("--user", choices=list(config.USERS), default=None)
+    ac.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, default=None)
     ac.add_argument("--decline-all", action="store_true", help="decline every pending proposal (demo reset)")
 
     dc = sub.add_parser("decide", help="Hephaestus: approve / decline / revise a proposed action")
@@ -86,9 +86,15 @@ def main() -> None:
     sh.add_argument("--labels", default="after,before-coverage", help="results labels to re-judge")
 
     m = sub.add_parser("improve", help="Morpheus: run Cognee's improve() on a user's dataset")
-    m.add_argument("--user", choices=list(config.USERS), required=True)
+    m.add_argument("--user", choices=config.USER_CHOICES, type=str.lower, required=True)
 
     args = p.parse_args()
+    for attr in ("user", "owner", "to", "only_user"):
+        v = getattr(args, attr, None)
+        if isinstance(v, list):
+            setattr(args, attr, [config.resolve_user(x) for x in v])
+        elif isinstance(v, str):
+            setattr(args, attr, config.resolve_user(v))
     asyncio.run(_run(args))
 
 
