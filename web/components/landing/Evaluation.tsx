@@ -15,7 +15,7 @@ export function Evaluation() {
         <div className="flex flex-col justify-between gap-5 bg-bg p-7">
           <div><div className="font-serif text-[96px] leading-[0.9] text-accent">{e.after?.mean.toFixed(2) ?? "n/a"}</div><div className="mt-3.5 font-mono text-[13px] text-muted">after the grant</div></div>
           <p className="max-w-[46ch] text-[15px] text-fg-2">Themis runs a deterministic fact check and a pinned judge on a different model from the one Athena answers with. Scores are attached to the Respan trace of every run.</p>
-          <Link href="/app/evals" className="btn btn-sm self-start">See every scenario</Link>
+          <Link href="/app/quality" className="btn btn-sm self-start">See every scenario</Link>
         </div>
       </div>
     </section>

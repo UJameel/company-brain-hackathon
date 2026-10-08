@@ -1,27 +1,51 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("recorded mode streams a turn with the step rail", async ({ page }) => {
+async function signIn(page: Page, who: "alice" | "bob") {
   await page.goto("/app");
-  await expect(page.getByText("recorded")).toBeVisible();
-  await page.getByRole("button", { name: "Pro plan price" }).click();
+  await page.locator(`#signin-${who}`).click();
+  await expect(page.locator("#user-menu")).toBeVisible();
+}
+
+test("sign-in screen, then a recorded turn with plain-language steps", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByText("Sign in to Northwind Labs")).toBeVisible();
+  await signIn(page, "alice");
+  await page.getByRole("button", { name: "What will Pro cost after launch?" }).click();
   await page.getByRole("button", { name: "Ask" }).click();
-  await expect(page.locator("article").getByText("Hermes")).toBeVisible();
-  await expect(page.locator("article").getByText(/\d+\.\d s/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("article").getByText("Understood as a question")).toBeVisible();
+  await expect(page.locator("article").getByText(/Found \d+ passages? /)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("article").getByText("Details")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("article").getByText(/respan|gpt-4o|claude-sonnet/)).toHaveCount(0);
   await page.screenshot({ path: `e2e/out/app-${test.info().project.name}.png` });
 });
 
-test("compare renders two answers side by side", async ({ page }) => {
-  await page.goto("/app");
-  await page.getByLabel("Compare both").check();
-  await page.getByRole("button", { name: "Pro plan price" }).click();
+test("sign out returns to the sign-in screen", async ({ page }) => {
+  await signIn(page, "bob");
+  await page.locator("#user-menu").click();
+  await page.locator("#sign-out").click();
+  await expect(page.getByText("Sign in to Northwind Labs")).toBeVisible();
+});
+
+test("the grant beat works in recorded mode", async ({ page }) => {
+  await signIn(page, "bob");
+  await page.getByRole("button", { name: "What will Pro cost after launch?" }).click();
   await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/dataset.* you can't see/)).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: /grant as alice/i }).click();
   await expect(page.locator("article")).toHaveCount(2, { timeout: 15_000 });
-  await expect(page.getByText(/dataset.* you can't see/)).toBeVisible();
+  await expect(page.locator("article").nth(1).getByText(/\$59/)).toBeVisible({ timeout: 15_000 });
 });
 
 test("unknown question in recorded mode explains itself", async ({ page }) => {
-  await page.goto("/app");
+  await signIn(page, "alice");
   await page.getByLabel("Ask the brain").fill("Who is on call tonight?");
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(page.getByText(/No recorded answer/)).toBeVisible();
+});
+
+test("quality page shows the three numbers and the brain status", async ({ page }) => {
+  await signIn(page, "alice");
+  await page.goto("/app/quality");
+  await expect(page.getByText(/recorded replay/)).toBeVisible();
+  await expect(page.getByText("coverage before the share")).toBeVisible();
 });

@@ -2,13 +2,13 @@
 import { useState } from "react";
 
 export const SCENARIOS = [
-  { label: "PR #3 blocker", q: "What is blocking PR #3, who owns it, and which issue tracks the blocker?" },
-  { label: "Pro plan price", q: "What will the Pro plan cost after the Atlas launch?" },
-  { label: "Launch risk", q: "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?" },
+  { label: "What's blocking PR #3?", q: "What is blocking PR #3, who owns it, and which issue tracks the blocker?" },
+  { label: "What will Pro cost after launch?", q: "What will the Pro plan cost after the Atlas launch?" },
+  { label: "Is the launch date at risk?", q: "Is the Atlas launch date at risk? If so, what is the fallback date and the deadline that decides it?" },
   { label: "Open an issue for Marco", q: "Open a GitHub issue asking Marco to add exponential backoff to the Paddle webhook handler so PR #3 can merge." },
 ];
 
-export function Composer({ busy, compare, onCompare, onSend }: { busy: boolean; compare: boolean; onCompare: (v: boolean) => void; onSend: (q: string) => void }) {
+export function Composer({ busy, onSend }: { busy: boolean; onSend: (q: string) => void }) {
   const [q, setQ] = useState("");
   const send = () => { const v = q.trim(); if (v && !busy) { onSend(v); setQ(""); } };
   return (
@@ -18,9 +18,8 @@ export function Composer({ busy, compare, onCompare, onSend }: { busy: boolean; 
       </div>
       <div className="flex gap-2">
         <label htmlFor="composer" className="sr-only">Ask the brain</label>
-        <input id="composer" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Ask the brain"
+        <input id="composer" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Ask the brain, or answer a suggestion: yes, no, make it shorter"
           className="min-w-0 flex-1 border border-line-2 bg-bg px-3 py-2 text-fg placeholder:text-muted focus:border-accent focus:outline-none" />
-        <label className="flex items-center gap-2 font-mono text-[11px] text-fg-2"><input type="checkbox" id="compare" checked={compare} onChange={(e) => onCompare(e.target.checked)} />Compare both</label>
         <button onClick={send} disabled={busy} className="btn btn-sm btn-primary">{busy ? "Thinking" : "Ask"}</button>
       </div>
     </div>

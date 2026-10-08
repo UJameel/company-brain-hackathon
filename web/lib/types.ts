@@ -5,15 +5,16 @@ export type Action = { tool: string; status: string; as_user?: string; input?: R
 export type Themis = { scenario_id: string; fact_score: number; hits: string[]; missing: string[]; leaks: string[]; grounded: string[]; ungrounded: string[]; action_ok: boolean };
 export type Proposal = { id: string; user: User; as_user: string; tool: string; input: Record<string, unknown>; rationale: string; origin: "suggested" | "requested" | "revised"; status: string; parent: string | null; created_at: string; result?: Record<string, unknown>; note?: string | null };
 export type Decision = { decision: "approve" | "decline"; action: Proposal } | { decision: "revise"; superseded: string; proposal: Proposal };
-export type Result = { user: User; question: string; answer: string; sources: string[]; hidden: string[]; action: Action | null; suggested_actions?: Proposal[]; usage: UsageRow[]; feed: string[]; latency_s: number; themis: Themis | null; cost_usd: number };
+export type Result = { user: User; question: string; answer: string; sources: string[]; hidden: string[]; action: Action | null; suggested_actions?: Proposal[]; decision?: Decision | { error: string }; usage: UsageRow[]; feed: string[]; latency_s: number; themis: Themis | null; cost_usd: number };
 export type HiddenMeta = { owner: string; sources?: string[]; extra?: string[]; tags?: string[]; documents?: number };
 export type ChatEvent =
-  | { name: "hermes"; data: { intent: string; action_tool: string | null; model: string } }
+  | { name: "hermes"; data: { intent: string; action_tool: string | null; model: string; decision?: string; proposal_id?: string } }
   | { name: "cerberus"; data: { readable: string[]; hidden: Record<string, HiddenMeta> } }
   | { name: "athena.recall"; data: { passages: number; sources: string[]; model: string } }
   | { name: "athena.token"; data: { text: string; replace?: boolean } }
   | { name: "hephaestus"; data: Action }
   | { name: "hephaestus.proposed"; data: { proposals: Proposal[] } }
+  | { name: "hephaestus.decided"; data: { decision: Decision | { error: string } } }
   | { name: "themis"; data: Themis }
   | { name: "done"; data: Result }
   | { name: "error"; data: { detail: string } };

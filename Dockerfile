@@ -14,7 +14,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 # per-user database paths as absolute paths, so the live state lives at that same path here.
 ARG STATE_HOME=/Users/usmanjameel/company-brain-hackathon
 ENV PYTHONUNBUFFERED=1 UV_SYSTEM_PYTHON=1 HOME=/app \
-    HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false ENABLE_BACKEND_ACCESS_CONTROL=true \
+    HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false ENABLE_BACKEND_ACCESS_CONTROL=true PANTHEON_ASYNC_MEMORY=1 \
     SYSTEM_ROOT_DIRECTORY=${STATE_HOME}/.cognee_system DATA_ROOT_DIRECTORY=${STATE_HOME}/.data_storage \
     PRISTINE_STATE_DIR=/app/state-pristine LIVE_STATE_DIR=${STATE_HOME} PORT=8080
 RUN apt-get update && apt-get install -y --no-install-recommends curl libpq5 && rm -rf /var/lib/apt/lists/*

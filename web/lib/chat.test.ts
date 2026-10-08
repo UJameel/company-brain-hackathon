@@ -40,6 +40,12 @@ describe("applyEvent", () => {
     t = applyEvent(t, { name: "athena.token", data: { text: "The Pro plan costs $49.", replace: true } });
     expect(t.answer).toBe("The Pro plan costs $49.");
   });
+  it("a decided event records the decision and lights the motor cortex", () => {
+    const action = { id: "a1", user: "bob" as const, as_user: "bob@northwind.dev", tool: "slack_send_message", input: {}, rationale: "r", origin: "suggested" as const, status: "approved-dry-run", parent: null, created_at: "t" };
+    const t = applyEvent(newTurn("bob", "yes"), { name: "hephaestus.decided", data: { decision: { decision: "approve", action } } });
+    expect(t.region).toBe("motor");
+    expect(t.steps.decision).toEqual({ decision: "approve", action });
+  });
   it("does not mutate the previous turn", () => {
     const a = newTurn("alice", "Q");
     const b = applyEvent(a, { name: "athena.token", data: { text: "x" } });

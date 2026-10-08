@@ -156,6 +156,54 @@ def test_fallback_token_event_replaces_partial_text(fake_backend, monkeypatch):
     assert tokens[-1] == {"text": "The Pro plan costs $49.", "replace": True}
 
 
+def test_decision_turn_applies_the_proposal_without_recall(fake_backend, monkeypatch):
+    """A plain-language reply to a pending proposal ("yes send it") routes as a decision:
+    Hephaestus decides, nothing is recalled, and the turn reports the outcome."""
+    seen_route_user = []
+
+    def route(question, usage):
+        seen_route_user.append(list(pipeline.hermes._route_user))  # hermes.route reads pending proposals through this
+        return {"intent": "decision", "decision": "approve", "proposal_id": "a1", "action_tool": None}
+
+    async def decide(action_id, decision, note=None, dry_run=True):
+        assert (action_id, decision, note, dry_run) == ("a1", "approve", None, True)
+        return {"decision": "approve", "action": {"id": "a1", "user": "bob", "tool": "slack_send_message", "status": "approved-dry-run",
+                                                   "as_user": "bob@northwind.dev", "input": {"channel": "#general", "text": "hi"}}}
+
+    async def recall_should_not_run(*a, **k):
+        raise AssertionError("recall must not run for a decision turn")
+
+    monkeypatch.setattr(pipeline.hermes, "route", route)
+    monkeypatch.setattr(pipeline.hephaestus, "decide", decide)
+    monkeypatch.setattr(pipeline.athena, "recall", recall_should_not_run)
+    events = asyncio.run(collect(user="bob", question="yes send it"))
+    names = [n for n, _ in events]
+    assert names == ["hermes", "hephaestus.decided", "done"]
+    assert seen_route_user == [["bob"]] and pipeline.hermes._route_user == []
+    assert events[0][1]["intent"] == "decision" and events[0][1]["decision"] == "approve"
+    done = events[-1][1]
+    assert done["decision"]["action"]["status"] == "approved-dry-run"
+    assert done["answer"].startswith("Approved (dry run") and done["sources"] == [] and done["hidden"] == []
+    assert done["suggested_actions"] == [] and done["themis"] is None
+
+
+def test_revise_decision_streams_the_new_proposal(fake_backend, monkeypatch):
+    monkeypatch.setattr(pipeline.hermes, "route", lambda q, u: {"intent": "decision", "decision": "revise", "proposal_id": "a1"})
+    new = {"id": "a2", "user": "bob", "as_user": "bob@northwind.dev", "tool": "slack_send_message", "input": {"channel": "#general", "text": "shorter"},
+           "rationale": "r", "origin": "revised", "status": "proposed", "parent": "a1", "created_at": "t"}
+
+    async def decide(action_id, decision, note=None, dry_run=True):
+        assert note == "make it shorter"
+        return {"decision": "revise", "superseded": "a1", "proposal": new}
+
+    monkeypatch.setattr(pipeline.hephaestus, "decide", decide)
+    events = asyncio.run(collect(user="bob", question="make it shorter"))
+    names = [n for n, _ in events]
+    assert names == ["hermes", "hephaestus.decided", "hephaestus.proposed", "done"]
+    assert events[2][1] == {"proposals": [new]}
+    assert events[-1][1]["suggested_actions"] == [new] and events[-1][1]["answer"].startswith("Revised.")
+
+
 def test_build_prompt_mirrors_athena():
     scope = {"identifier": "bob@northwind.dev", "hidden": {"alice-brain": {"owner": "alice", "extra": ["channel:leadership"]}}}
     p = pipeline.build_prompt("bob", "Q?", scope, ["[source:slack pulled-as:bob] hello"])

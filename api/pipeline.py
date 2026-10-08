@@ -7,6 +7,7 @@ synthesize call can stream tokens); everything else is the package's own functio
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 from typing import AsyncIterator
@@ -95,8 +96,38 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
     usage = llm.Usage()
     feed: list[str] = []
 
-    plan = await asyncio.to_thread(hermes.route, question, usage)
+    # hermes.route reads this user's pending proposals through hermes._route_user, exactly as hermes.ask does
+    hermes._route_user.append(user_key)
+    try:
+        plan = await asyncio.to_thread(hermes.route, question, usage)
+    finally:
+        hermes._route_user.pop()
     route_model = "/".join(llm.model_for("route"))  # provider/model, e.g. ollama/llama3.1:8b or respan/gpt-4o-mini
+
+    if plan.get("intent") == "decision":
+        # The user answered a proposal in plain language: apply it, no recall. Mirrors hermes.ask.
+        feed.append(f"Hermes routed: decision ({plan['decision']}) on proposal {plan['proposal_id']}")
+        yield "hermes", {"intent": "decision", "action_tool": None, "model": route_model, "decision": plan["decision"], "proposal_id": plan["proposal_id"]}
+        decided = await hephaestus.decide(plan["proposal_id"], plan["decision"], note=question if plan["decision"] == "revise" else None, dry_run=dry_run)
+        yield "hephaestus.decided", {"decision": decided}
+        if "error" in decided:
+            text = decided["error"]
+        elif plan["decision"] == "revise":
+            text = f"Revised. New proposal [{decided['proposal']['id']}]: {json.dumps(decided['proposal']['input'])}. Say 'yes' to send it, 'no' to drop it, or tell me what to change."
+            yield "hephaestus.proposed", {"proposals": [decided["proposal"]]}
+        elif plan["decision"] == "approve":
+            a = decided["action"]
+            text = ("Done. " if a["status"] == "executed" else "Approved (dry run, nothing sent). ") + f"{a['tool']} as {a['as_user']}: {json.dumps(a['input'])[:300]}"
+        else:
+            text = "Declined. I'll remember that you didn't want this one."
+        feed.append(f"Hephaestus: {plan['decision']} -> {decided.get('action', decided.get('proposal', {})).get('status', 'ok')}")
+        yield "done", {
+            "user": user_key, "question": question, "answer": text, "sources": [], "hidden": [], "action": decided.get("action"),
+            "decision": decided, "suggested_actions": [decided["proposal"]] if plan["decision"] == "revise" and "proposal" in decided else [],
+            "usage": usage.calls, "feed": feed, "latency_s": round(time.time() - t0, 2), "themis": None, "cost_usd": cost_usd(usage.calls),
+        }
+        return
+
     feed.append(f"Hermes routed: {plan['intent']} via {route_model}")
     yield "hermes", {"intent": plan.get("intent"), "action_tool": plan.get("action_tool"), "model": route_model}
 
