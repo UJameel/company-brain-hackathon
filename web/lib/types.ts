@@ -11,7 +11,7 @@ export type ChatEvent =
   | { name: "hermes"; data: { intent: string; action_tool: string | null; model: string } }
   | { name: "cerberus"; data: { readable: string[]; hidden: Record<string, HiddenMeta> } }
   | { name: "athena.recall"; data: { passages: number; sources: string[]; model: string } }
-  | { name: "athena.token"; data: { text: string } }
+  | { name: "athena.token"; data: { text: string; replace?: boolean } }
   | { name: "hephaestus"; data: Action }
   | { name: "hephaestus.proposed"; data: { proposals: Proposal[] } }
   | { name: "themis"; data: Themis }

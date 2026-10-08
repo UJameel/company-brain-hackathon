@@ -24,3 +24,7 @@ primary_region = "sjc"
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1gb"
+
+# /reset exits the process on purpose; always come back.
+[[restart]]
+  policy = "always"

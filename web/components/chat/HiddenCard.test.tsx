@@ -1,12 +1,24 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/session", () => ({ useSession: () => ({ mode: "live", refresh: async () => {}, granted: () => false }) }));
+const session = { mode: "live", refresh: async () => {}, granted: () => false, grantLocal: vi.fn() };
+vi.mock("@/lib/session", () => ({ useSession: () => session }));
 vi.mock("@/lib/api", () => ({ api: { grant: vi.fn() } }));
 
+import { fireEvent } from "@testing-library/react";
 import { HiddenCard } from "./HiddenCard";
 
 describe("HiddenCard", () => {
+  afterEach(() => { session.mode = "live"; cleanup(); });
+  it("in recorded mode, Grant records a local grant and re-asks", () => {
+    session.mode = "recorded";
+    const onGranted = vi.fn();
+    render(<HiddenCard user="bob" onGranted={onGranted} hidden={{ "alice-brain": { owner: "alice", extra: ["channel:leadership"] } }} />);
+    fireEvent.click(screen.getByRole("button", { name: /grant as alice/i }));
+    expect(session.grantLocal).toHaveBeenCalledWith("alice", "bob");
+    expect(onGranted).toHaveBeenCalled();
+    session.mode = "live";
+  });
   it("lists every hidden dataset and falls back to sources when extra is missing", () => {
     render(<HiddenCard user="bob" onGranted={() => {}} hidden={{
       "alice-brain": { owner: "alice", extra: ["channel:leadership", "source:github"] },

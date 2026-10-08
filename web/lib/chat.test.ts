@@ -35,6 +35,11 @@ describe("applyEvent", () => {
     const viaDone = applyEvent(newTurn("bob", "Q"), { name: "done", data: { ...done, suggested_actions: [p] } });
     expect(viaDone.steps.proposals).toEqual([p]);
   });
+  it("a replace token event discards the partial answer", () => {
+    let t = applyEvent(newTurn("bob", "Q"), { name: "athena.token", data: { text: "The Pro " } });
+    t = applyEvent(t, { name: "athena.token", data: { text: "The Pro plan costs $49.", replace: true } });
+    expect(t.answer).toBe("The Pro plan costs $49.");
+  });
   it("does not mutate the previous turn", () => {
     const a = newTurn("alice", "Q");
     const b = applyEvent(a, { name: "athena.token", data: { text: "x" } });

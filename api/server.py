@@ -186,5 +186,6 @@ async def reset() -> dict:
         raise HTTPException(400, "reset needs PRISTINE_STATE_DIR and LIVE_STATE_DIR")
     shutil.rmtree(LIVE, ignore_errors=True)
     shutil.copytree(PRISTINE, LIVE)
+    hephaestus.ACTIONS_LOG.unlink(missing_ok=True)  # proposals and decisions belong to the state being discarded
     asyncio.get_running_loop().call_later(0.3, os._exit, 0)  # Fly restarts the machine
     return {"ok": True, "restarting": True}

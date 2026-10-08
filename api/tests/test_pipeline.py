@@ -116,6 +116,46 @@ def test_granted_is_derived_from_scope_not_state_file(fake_backend, monkeypatch)
     assert done["themis"]["fact_score"] == 1.0  # after_grant expectations applied: $49 present, $1000 absent
 
 
+def test_stream_synthesize_records_usage_with_provider(monkeypatch):
+    """The real streaming path must record the synthesize usage row the way llm.Usage expects
+    (step, provider, model, resp); a wrong call here silently falls back to a second full completion."""
+    from types import SimpleNamespace
+
+    chunks = [
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Pro "))], usage=None),
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="is $49."))], usage=None),
+        SimpleNamespace(choices=[], usage=SimpleNamespace(prompt_tokens=800, completion_tokens=40)),
+    ]
+
+    class FakeCompletions:
+        def create(self, **kw):
+            assert kw["stream"] is True
+            return iter(chunks)
+
+    monkeypatch.setattr(pipeline.llm, "client", lambda: SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions())))
+    usage = pipeline.llm.Usage()
+
+    async def drain():
+        return [p async for p in pipeline.stream_synthesize("prompt", usage)]
+
+    assert "".join(asyncio.run(drain())) == "Pro is $49."
+    assert len(usage.calls) == 1
+    row = usage.calls[0]
+    assert row["step"] == "synthesize" and row["provider"] == "respan" and row["prompt_tokens"] == 800 and row["completion_tokens"] == 40
+
+
+def test_fallback_token_event_replaces_partial_text(fake_backend, monkeypatch):
+    async def broken(prompt, usage):
+        yield "The Pro "
+        raise RuntimeError("gateway closed")
+
+    monkeypatch.setattr(pipeline, "stream_synthesize", broken)
+    monkeypatch.setattr(pipeline.llm, "complete", lambda step, system, user, usage=None, max_tokens=700: "The Pro plan costs $49.")
+    events = asyncio.run(collect())
+    tokens = [d for n, d in events if n == "athena.token"]
+    assert tokens[-1] == {"text": "The Pro plan costs $49.", "replace": True}
+
+
 def test_build_prompt_mirrors_athena():
     scope = {"identifier": "bob@northwind.dev", "hidden": {"alice-brain": {"owner": "alice", "extra": ["channel:leadership"]}}}
     p = pipeline.build_prompt("bob", "Q?", scope, ["[source:slack pulled-as:bob] hello"])

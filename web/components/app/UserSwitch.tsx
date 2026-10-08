@@ -2,12 +2,20 @@
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { USERS, type User } from "@/lib/types";
+import { useState } from "react";
 
 const ROLE: Record<User, string> = { alice: "Eng lead", bob: "Contractor" };
 
 export function UserSwitch() {
   const s = useSession();
-  const revoke = async () => { await api.revoke("alice", "bob"); await s.refresh(); };
+  const [error, setError] = useState<string | null>(null);
+  const revoke = async () => {
+    setError(null);
+    try {
+      if (s.mode === "live") { await api.revoke("alice", "bob"); await s.refresh(); }
+      else s.revokeLocal("alice", "bob");
+    } catch (e) { setError((e as Error).message); }
+  };
   return (
     <div className="flex flex-col gap-2">
       <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Asking as</span>
@@ -23,9 +31,10 @@ export function UserSwitch() {
       {s.granted("bob") && (
         <div className="flex items-center justify-between font-mono text-[11px] text-accent">
           <span>alice shared with bob</span>
-          {s.mode === "live" && <button onClick={revoke} className="text-muted underline-offset-2 hover:underline">Revoke</button>}
+          <button onClick={revoke} className="text-muted underline-offset-2 hover:underline">Revoke</button>
         </div>
       )}
+      {error && <p className="font-mono text-[11px] text-muted">Revoke failed: {error}</p>}
     </div>
   );
 }

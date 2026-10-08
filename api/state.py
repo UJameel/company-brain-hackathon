@@ -10,7 +10,9 @@ import os
 import shutil
 from pathlib import Path
 
-MARKER = Path("system") / "databases" / "cognee_db"
+# Cognee stores absolute per-user database paths in its relational store, so the live copy
+# keeps the laptop's directory names and sits at the same absolute root (see Dockerfile).
+MARKER = Path(".cognee_system") / "databases" / "cognee_db"
 
 
 def restore_if_missing(pristine: Path, live: Path) -> bool:

@@ -11,8 +11,8 @@ function base(): string {
   return b;
 }
 
-async function get<T>(path: string): Promise<T> {
-  const r = await fetch(`${base()}${path}`, { cache: "no-store" });
+async function get<T>(path: string, timeoutMs?: number): Promise<T> {
+  const r = await fetch(`${base()}${path}`, { cache: "no-store", signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
 }
@@ -32,7 +32,7 @@ export const api = {
   execute: (user: User, tool: string, input: Record<string, unknown>) => post<Record<string, unknown>>("/action/execute", { user, tool, input }, write),
   scope: (user: User) => get<{ readable: string[]; hidden: Record<string, unknown> }>(`/scope?user=${user}`),
   evals: () => get<Evals>("/evals"),
-  health: () => get<Health>("/health"),
+  health: () => get<Health>("/health", 4000),  // a hung host must fall back to recorded mode quickly
   graph: (user: User, maxNodes = 600) => get<Graph>(`/graph?user=${user}&max_nodes=${maxNodes}`),
   connections: (user: User) => get<Connection[]>(`/connections?user=${user}`),
   sync: (body: { user: User; channels: string[]; github_repo?: string | null; notion_query?: string | null; all_sources?: boolean }) => post<Record<string, unknown>>("/sync", body, write),

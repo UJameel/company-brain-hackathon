@@ -32,7 +32,7 @@ export function applyEvent(turn: Turn, e: ChatEvent): Turn {
     case "hermes": next.steps.hermes = e.data; break;
     case "cerberus": next.steps.cerberus = e.data; break;
     case "athena.recall": next.steps.recall = e.data; break;
-    case "athena.token": next.answer = turn.answer + e.data.text; break;
+    case "athena.token": next.answer = e.data.replace ? e.data.text : turn.answer + e.data.text; break;
     case "hephaestus": next.steps.hephaestus = e.data; break;
     case "hephaestus.proposed": next.steps.proposals = e.data.proposals; break;
     case "themis": next.steps.themis = e.data; break;

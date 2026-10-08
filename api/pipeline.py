@@ -75,7 +75,7 @@ async def stream_synthesize(prompt: str, usage: llm.Usage) -> AsyncIterator[str]
                 if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                     loop.call_soon_threadsafe(queue.put_nowait, chunk.choices[0].delta.content)
             if last is not None and getattr(last, "usage", None):
-                usage.add("synthesize", model, last)
+                usage.add("synthesize", "respan", model, last)  # llm.Usage.add(step, provider, model, resp)
             loop.call_soon_threadsafe(queue.put_nowait, DONE)
         except Exception as e:  # surfaced to the consumer, which falls back
             loop.call_soon_threadsafe(queue.put_nowait, e)
@@ -117,8 +117,9 @@ async def run(user_key: str, question: str, dry_run: bool = True) -> AsyncIterat
             answer += piece
             yield "athena.token", {"text": piece}
     except Exception:
+        # the stream broke part-way: one plain completion, and the client discards the partial text
         answer = await asyncio.to_thread(llm.complete, "synthesize", athena.SYSTEM, prompt, usage)
-        yield "athena.token", {"text": answer}
+        yield "athena.token", {"text": answer, "replace": True}
     answer = answer.strip()
     feed.append(f"Athena: {len(passages)} passages from {sources} via {synth_model}")
 
