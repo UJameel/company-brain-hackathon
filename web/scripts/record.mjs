@@ -1,6 +1,6 @@
 // Captures real /ask responses for the demo questions, both users, before and after the grant.
 // Usage: API=http://localhost:8080 DEMO_KEY=dev node scripts/record.mjs
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const API = process.env.API ?? "http://localhost:8080";
 const KEY = process.env.DEMO_KEY ?? "";
@@ -13,7 +13,9 @@ const QUESTIONS = [
 const norm = (q) => q.trim().split(/\s+/).join(" ").toLowerCase();
 const post = (p, b, h = {}) => fetch(`${API}${p}`, { method: "POST", headers: { "content-type": "application/json", ...h }, body: JSON.stringify(b) }).then((r) => r.json());
 
-const out = {};
+// Keep whatever was recorded before (the eval-derived entries) and overwrite the demo questions.
+const file = new URL("../data/recorded.json", import.meta.url);
+const out = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
 for (const granted of [false, true]) {
   if (granted) await post("/grant", { owner: "alice", to: "bob" }, { "X-Demo-Key": KEY });
   for (const user of ["alice", "bob"]) for (const q of QUESTIONS) {
@@ -22,4 +24,4 @@ for (const granted of [false, true]) {
   }
 }
 await post("/revoke", { owner: "alice", to: "bob" }, { "X-Demo-Key": KEY });
-writeFileSync(new URL("../data/recorded.json", import.meta.url), JSON.stringify(out, null, 2));
+writeFileSync(file, JSON.stringify(out, null, 2));
