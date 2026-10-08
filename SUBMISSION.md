@@ -143,6 +143,7 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 
 ## Demo
 
+- Live app (recorded mode): https://company-brain-hackathon.vercel.app · live mode locally: tmux sessions `pantheon-api` (:8080) and `pantheon-web` (:3000), see README
 - 3-minute pitch outline:
 
 ```text
@@ -167,7 +168,7 @@ Judges without our SaaS accounts: `sample_data/alice.json` and `sample_data/bob.
 
 ## Links
 
-- **Live app:** https://company-brain-hackathon.vercel.app (Next.js on Vercel; API on Fly; falls back to a recorded run of the four demo questions if the API is unreachable)
+- **Live app:** https://company-brain-hackathon.vercel.app (Next.js on Vercel). The hosted build runs in recorded mode: sign-in, chat replay of the four demo questions for both users, and the grant beat all work without the API. The live mode (real Cognee recall, Scalekit actions, decision model) runs locally per the Reproduction section; a Fly image is built but not deployed at submission time.
 - Repo: https://github.com/UJameel/company-brain-hackathon
 - Fictional company repo (live GitHub source + write-back target): https://github.com/UJameel/northwind-atlas
 - Respan traces: platform.respan.ai, workspace ask-luca, workflow `pantheon.ask`
