@@ -1,4 +1,5 @@
 "use client";
+import { resultUrl } from "@/lib/actions";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Proposal } from "@/lib/types";
@@ -25,11 +26,13 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
     finally { setBusy(null); }
   };
   const settled = proposal.status !== "proposed";
+  const link = settled ? resultUrl(proposal.result) : null;
+  const STATUS: Record<string, string> = { proposed: "waiting for you", executed: "done", "approved-dry-run": "approved (dry run, nothing sent)", declined: "declined", revised: "revised" };
   return (
     <div className={`mt-3 border px-3 py-2.5 text-[12.5px] ${settled ? "border-line" : "border-accent/50 bg-accent-dim"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-serif text-base font-semibold">{TOOL_LABEL[proposal.tool] ?? proposal.tool}</span>
-        <span className="font-mono text-[11px] text-muted">{proposal.origin} · {proposal.status}{proposal.as_user ? ` · as ${proposal.as_user}` : ""}</span>
+        <span className="font-mono text-[11px] text-muted">{STATUS[proposal.status] ?? proposal.status}{proposal.as_user ? ` · as ${proposal.as_user}` : ""}</span>
       </div>
       <p className="mt-1 text-fg-2">{proposal.rationale}</p>
       {body && <p className="mt-2 text-fg">“{body}”</p>}
@@ -39,7 +42,7 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
       {error && <p className="mt-2 font-mono text-[11px] text-muted">Could not record the decision: {error}</p>}
       {s.mode === "live" && !settled && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
-          <button onClick={() => act("approve")} disabled={!!busy} className="btn btn-sm btn-primary">{busy === "approve" ? "Approving" : "Approve"}</button>
+          <button onClick={() => act("approve")} disabled={!!busy} className="btn btn-sm btn-primary">{busy === "approve" ? "Doing it" : proposal.tool === "github_issue_create" ? "Approve and open it" : "Approve and send it"}</button>
           <button onClick={() => act("decline")} disabled={!!busy} className="btn btn-sm">{busy === "decline" ? "Declining" : "Decline"}</button>
           <button onClick={() => setRevising(!revising)} disabled={!!busy} className="btn btn-sm">Revise</button>
           {revising && (
@@ -51,7 +54,7 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
           )}
         </div>
       )}
-      {settled && proposal.result && typeof proposal.result.url === "string" && <a className="mt-2 inline-block font-mono text-[11px] text-accent" href={proposal.result.url} target="_blank" rel="noreferrer">Open the result</a>}
+      {link && <a className="mt-2 inline-block font-mono text-[11px] text-accent" href={link} target="_blank" rel="noreferrer">Open what was created</a>}
     </div>
   );
 }

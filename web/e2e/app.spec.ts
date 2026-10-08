@@ -36,6 +36,15 @@ test("the grant beat works in recorded mode", async ({ page }) => {
   await expect(page.locator("article").nth(1).getByText(/\$59/)).toBeVisible({ timeout: 15_000 });
 });
 
+test("an explicit request shows what Pantheon wants to do", async ({ page }) => {
+  await signIn(page, "alice");
+  await page.getByRole("button", { name: "Open an issue for Marco" }).click();
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText("Pantheon wants to")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Open a GitHub issue", { exact: true })).toBeVisible();
+  await expect(page.getByText(/waiting for you/)).toBeVisible();
+});
+
 test("unknown question in recorded mode explains itself", async ({ page }) => {
   await signIn(page, "alice");
   await page.getByLabel("Ask the brain").fill("Who is on call tonight?");

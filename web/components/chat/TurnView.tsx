@@ -1,4 +1,5 @@
 "use client";
+import { proposalFromRequest } from "@/lib/actions";
 import type { Turn } from "@/lib/chat";
 import { highlight, stripBold } from "@/lib/highlight";
 import { sourceName } from "@/lib/steps";
@@ -18,6 +19,9 @@ export function TurnView({ turn, onGranted }: { turn: Turn; onGranted: () => voi
   useEffect(() => { setProposals(turn.steps.proposals ?? []); }, [turn.steps.proposals]);
   const replaceProposal = (id: string) => (next: Proposal | null) => setProposals((ps) => ps.flatMap((p) => (p.id === id ? (next ? [next] : []) : [p])));
   const decisionTurn = turn.steps.hermes?.intent === "decision";
+  // An explicit request that ran as a dry run waits for the person's decision, like a suggestion.
+  const [request, setRequest] = useState<Proposal | null>(null);
+  useEffect(() => { setRequest(decisionTurn ? null : proposalFromRequest(turn.user, turn.steps.hephaestus)); }, [turn.user, turn.steps.hephaestus, decisionTurn]);
   return (
     <article className="border border-line bg-bg-2 p-4">
       <header className="mb-3 flex items-baseline justify-between gap-2">
@@ -36,7 +40,13 @@ export function TurnView({ turn, onGranted }: { turn: Turn; onGranted: () => voi
         </div>
       )}
       {turn.steps.cerberus && Object.keys(turn.steps.cerberus.hidden).length > 0 && <HiddenCard hidden={turn.steps.cerberus.hidden} user={turn.user} onGranted={onGranted} />}
-      {turn.steps.hephaestus && !decisionTurn && <ActionCard action={turn.steps.hephaestus} user={turn.user} />}
+      {request && (
+        <div className="mt-3">
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Pantheon wants to</div>
+          <ProposalCard proposal={request} onChange={(next) => setRequest(next)} />
+        </div>
+      )}
+      {turn.steps.hephaestus && !decisionTurn && !request && <ActionCard action={turn.steps.hephaestus} user={turn.user} />}
       {proposals.length > 0 && (
         <div className="mt-3">
           <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">{decisionTurn ? "Revised suggestion" : "The brain suggests"}</div>
