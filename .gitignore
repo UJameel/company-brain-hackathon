@@ -18,3 +18,5 @@ cognee-feedback.md
 .playwright-mcp/
 .pantheon_actions.jsonl
 .claude/worktrees/
+.superpowers/
+build-state/
