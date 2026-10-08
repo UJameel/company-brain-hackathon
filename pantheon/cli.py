@@ -71,6 +71,7 @@ def main() -> None:
 
     ac = sub.add_parser("actions", help="Hephaestus: list proposed actions awaiting a decision")
     ac.add_argument("--user", choices=list(config.USERS), default=None)
+    ac.add_argument("--decline-all", action="store_true", help="decline every pending proposal (demo reset)")
 
     dc = sub.add_parser("decide", help="Hephaestus: approve / decline / revise a proposed action")
     dc.add_argument("action_id")
@@ -174,6 +175,9 @@ async def _run(args) -> None:
 
         for p_ in hephaestus.pending(args.user):
             print(f"[{p_['id']}] {p_['user']:<6} {p_['tool']:<22} {p_['origin']:<10} {json.dumps(p_['input'])[:110]}")
+            if args.decline_all:
+                r_ = await hephaestus.decide(p_["id"], "decline", note="demo reset")
+                print("   declined" if "action" in r_ else f"   {r_}")
     elif args.cmd == "decide":
         from . import hephaestus
 

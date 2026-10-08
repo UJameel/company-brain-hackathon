@@ -66,10 +66,17 @@ _route_user: list[str] = []  # set by ask() so route() can see this user's pendi
 
 
 def _pending_for(_usage) -> list[dict]:
+    """Proposals a decision can refer to: only those from this user's most recent turn
+    (and revisions of them, which inherit the turn's question), newest first. Older pending
+    proposals from earlier turns are not candidates; a reply like "no, drop it" means the
+    thing the brain just suggested, not something from an hour ago."""
     if not _route_user:
         return []
-    items = hephaestus.pending(_route_user[-1])
-    return sorted(items, key=lambda p: p["created_at"], reverse=True)
+    items = sorted(hephaestus.pending(_route_user[-1]), key=lambda p: p["created_at"], reverse=True)
+    if not items:
+        return []
+    latest_turn = items[0]["question"]
+    return [p for p in items if p["question"] == latest_turn]
 
 
 @task(name="cerberus.scope")
