@@ -43,7 +43,9 @@ function Brain3D({ mode, activeRegion, graph, className, onRegion }: BrainProps)
     const small = window.innerWidth < 768;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
-    renderer.domElement.style.display = "block";
+    // Out of layout flow: the canvas's intrinsic size must never grow the host, or the
+    // ResizeObserver below feeds back on itself and the hero grows without bound.
+    Object.assign(renderer.domElement.style, { display: "block", position: "absolute", inset: "0", width: "100%", height: "100%" });
     el.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 20);
@@ -77,7 +79,11 @@ function Brain3D({ mode, activeRegion, graph, className, onRegion }: BrainProps)
     let az = CAMERA.thalamus.az, el2 = CAMERA.thalamus.el, dist = CAMERA.thalamus.dist, vAz = 0, vEl = 0, vD = 0, t = 0, raf = 0, visible = true;
     const phase = pts.map((_, i) => (i * 0.618) % (Math.PI * 2));
 
-    const resize = () => { const w = el.clientWidth || 1, h = el.clientHeight || 1; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+    const resize = () => {
+      const w = el.clientWidth || 1, h = el.clientHeight || 1;
+      if (renderer.domElement.width === Math.round(w * renderer.getPixelRatio()) && renderer.domElement.height === Math.round(h * renderer.getPixelRatio())) return;
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    };
     const ro = new ResizeObserver(resize); ro.observe(el); resize();
     const onMove = (e: PointerEvent) => { const b = el.getBoundingClientRect(); state.current.pointer = [((e.clientX - b.left) / b.width - 0.5) * 2, ((e.clientY - b.top) / b.height - 0.5) * 2]; };
     if (mode === "autoplay" && !reduce) el.addEventListener("pointermove", onMove);

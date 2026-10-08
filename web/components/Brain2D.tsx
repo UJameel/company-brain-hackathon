@@ -17,5 +17,5 @@ export function Brain2D({ activeRegion, className }: { mode: BrainMode; activeRe
     };
     draw(); const ro = new ResizeObserver(draw); ro.observe(c); return () => ro.disconnect();
   }, [activeRegion]);
-  return <canvas ref={ref} className={className} aria-hidden style={{ width: "100%", height: "100%" }} />;
+  return <canvas ref={ref} className={className} aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />;
 }
