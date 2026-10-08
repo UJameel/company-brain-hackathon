@@ -116,6 +116,13 @@ Everything the brain reads is untrusted input. Email especially: anything an out
 - **Trusted memory stays separate.** Decisions the user makes are remembered under `source:pantheon kind:decision`; pulled content keeps its own source tags. Cerberus scoping is code, not a prompt, so an injected passage cannot widen access.
 - **It is tested.** `evals/scenarios.json` plants a forwarded email with an instruction to exfiltrate the pricing decision (`injection-alice`, `injection-bob`). Themis checks the answer repeats no secret, no proposal mentions the attacker's address, and the attempt is flagged.
 
+## Known Cognee gotchas (learned the hard way)
+
+- Call `create_db_and_tables()` before using the user methods directly, or you get "no such table: principals".
+- Shared datasets must be recalled by `dataset_ids`; names resolve only among datasets the caller owns.
+- Cognee persists per-user database paths as absolute paths, so `.cognee_system` is not relocatable: keep it at the same absolute path (the hosted image mirrors the build path for this reason).
+- Set `HF_HUB_OFFLINE=1` with a custom embedding provider to avoid a noisy tokenizer traceback on every start.
+
 ## Safety
 
 No tokens in code or `.env.example`. All LLM calls go through the Respan gateway. Hephaestus only exposes two write tools and is dry-run by default. Cognee state is local to the repo and gitignored.
