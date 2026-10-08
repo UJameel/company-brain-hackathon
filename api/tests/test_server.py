@@ -153,3 +153,21 @@ def test_same_user_chats_are_serialised(client, monkeypatch):
     out = asyncio.run(main())
     assert all(any("event: done" in c for c in chunks) for chunks in out)
     assert order == ["start:one", "end:one", "start:two", "end:two"]
+
+
+def test_chat_accepts_display_name_and_resolves_to_key(client):
+    r = client.post("/chat", json={"user": "David", "question": "Q?"})
+    assert r.status_code == 200
+    assert parse_sse(r.text)[-1][1]["user"] == "alice"
+
+
+def test_scope_query_accepts_display_name(client, monkeypatch):
+    seen = {}
+
+    async def fake_scope(user):
+        seen["user"] = user
+        return {"readable": [], "hidden": [], "shared_in": []}
+
+    monkeypatch.setattr(server.cerberus, "scope", fake_scope)
+    assert client.get("/scope", params={"user": "goliath"}).status_code == 200
+    assert seen["user"] == "bob"

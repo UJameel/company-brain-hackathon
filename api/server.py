@@ -7,12 +7,12 @@ import os
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from typing import AsyncIterator, Literal
+from typing import Annotated, AsyncIterator, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator
 
 from .state import restore_from_env
 
@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 _locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-User = Literal["alice", "bob"]
+User = Annotated[str, BeforeValidator(config.resolve_user)]  # key or display name, resolved to the key
 
 
 class AskBody(BaseModel):

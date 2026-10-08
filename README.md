@@ -27,7 +27,7 @@ Built solo in one afternoon at the Scalekit × Cognee × Respan "Build a Company
   <img src="docs/screenshots/landing.png" alt="Pantheon landing page: the company brain that knows who is asking" width="100%">
 </p>
 
-> **Names on screen:** the engineering lead is **David** and the contractor is **Goliath** everywhere people are named (another team at the event used Alice and Bob). Internally the user keys, datasets (`alice-brain`, `bob-brain`), sample data and scenarios keep `alice`/`bob`.
+> **Names:** the engineering lead is **David** and the contractor is **Goliath**. The CLI and API accept those names anywhere a user is named. Internally the user keys, dataset ids, sample data and scenario ids keep their original short ids.
 
 ## How it works
 
@@ -44,6 +44,7 @@ flowchart TD
     MN -->|"remember into that person's own dataset"| CG
 
     U(["David or Goliath asks in the web console"]) --> H["Hermes<br/>routes the turn, picks the model per step"]
+    H -->|"asked to do something"| HP
     H --> C["Cerberus<br/>scopes recall to what this person may read"]
     C --> A["Athena<br/>recalls scoped passages, writes a cited answer"]
     CG -->|"recall, readable datasets only"| A
@@ -92,12 +93,12 @@ cp .env.example .env          # fill RESPAN_API_KEY; Scalekit vars only needed f
 python -m pantheon ingest
 
 # 2. Ask as two users
-python -m pantheon ask --user alice "What is blocking PR #42 and who owns it?"
-python -m pantheon ask --user bob   "What is blocking PR #42 and who owns it?"
+python -m pantheon ask --user david   "What is blocking PR #42 and who owns it?"
+python -m pantheon ask --user goliath "What is blocking PR #42 and who owns it?"
 
 # 3. Evaluate (before), grant, evaluate (after)
 python -m pantheon eval --label before
-python -m pantheon grant --owner alice --to bob
+python -m pantheon grant --owner david --to goliath
 python -m pantheon eval --label after
 python -m pantheon compare before after
 ```
@@ -105,9 +106,9 @@ python -m pantheon compare before after
 Live mode (your own Scalekit workspace):
 
 ```bash
-python -m pantheon sources --user alice --plan        # every system David connected, and what a generic pull would call
-python -m pantheon ingest --user alice --live --all --github-repo <owner>/<repo> --notion-query "Launch Plan"
-python -m pantheon ask --user alice "Who owns the launch announcement? Draft them a Slack message." --execute
+python -m pantheon sources --user david --plan        # every system David connected, and what a generic pull would call
+python -m pantheon ingest --user david --live --all --github-repo <owner>/<repo> --notion-query "Launch Plan"
+python -m pantheon ask --user david "Who owns the launch announcement? Draft them a Slack message." --execute
 python -m pantheon actions                            # proposals awaiting a decision
 python -m pantheon decide <id> approve|decline|revise --note "..."
 ```
@@ -153,7 +154,7 @@ Three numbers, because a grant changes what *correct* means:
 
 - **Permanent graph:** one dataset per user, one document per Slack channel and per GitHub issue/PR/file, each tagged `source:*`, `channel:*`/`repo:*`, `owner:*`. The provenance header is also the first line of the text so retrieved chunks carry their source.
 - **Session memory:** Hermes keeps the run's usage and activity feed per request; Cognee session memory is left at its default.
-- **Improve:** `pantheon improve --user alice` runs Cognee's enrichment on the dataset.
+- **Improve:** `pantheon improve --user david` runs Cognee's enrichment on the dataset.
 - **Graph explorer:** `cognee-cli -ui`.
 
 ## Trust boundaries
