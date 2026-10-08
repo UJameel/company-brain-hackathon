@@ -14,12 +14,16 @@ export function GraphView() {
   const s = useSession(); const me = useUser();
   const [g, setG] = useState<LaidOut | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const granted = s.granted(me);
+  const mode = s.mode;
   useEffect(() => {
-    if (s.mode === "checking") return;
+    if (mode === "checking") return;
+    let cancelled = false;
     setG(null); setErr(null);
-    const source = s.mode === "live" ? api.graph(me) : Promise.resolve(recordedGraphFor(me, s.granted(me)));
-    source.then(layoutGraph).then(setG).catch((e) => setErr((e as Error).message));
-  }, [me, s.mode, s.grants, s]);
+    const source = mode === "live" ? api.graph(me) : Promise.resolve(recordedGraphFor(me, granted));
+    source.then(layoutGraph).then((g) => { if (!cancelled) setG(g); }).catch((e) => { if (!cancelled) setErr((e as Error).message); });
+    return () => { cancelled = true; };
+  }, [me, mode, granted]);
   const sources = useMemo(() => { const order: string[] = []; g?.nodes.forEach((n) => n.node_set.filter((t) => t.startsWith("source:")).forEach((t) => sourceTone(t, order))); return order; }, [g]);
   const datasets = useMemo(() => { const m = new Map<string, number>(); g?.nodes.forEach((n) => m.set(n.dataset ?? "?", (m.get(n.dataset ?? "?") ?? 0) + 1)); return [...m]; }, [g]);
   return (
