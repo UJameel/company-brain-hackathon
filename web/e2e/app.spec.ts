@@ -48,7 +48,7 @@ test("graph and connections pages work from the recording", async ({ page }) => 
   await page.goto("/app/graph");
   await expect(page.getByText(/\d+ nodes · \d+ edges · recorded snapshot/)).toBeVisible({ timeout: 20_000 });
   await page.goto("/app/connections");
-  await expect(page.getByText("GitHub")).toBeVisible();
+  await expect(page.locator("li").filter({ hasText: "github-connect" })).toBeVisible();
   await expect(page.getByRole("button", { name: /needs the live brain/ })).toBeDisabled();
 });
 
