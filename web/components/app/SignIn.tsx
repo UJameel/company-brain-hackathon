@@ -1,12 +1,10 @@
 "use client";
 import { Logo } from "@/components/Logo";
+import { PEOPLE } from "@/lib/names";
 import { useSession } from "@/lib/session";
 import { USERS, type User } from "@/lib/types";
 
-export const PEOPLE: Record<User, { name: string; role: string; sources: string[] }> = {
-  alice: { name: "Alice", role: "Engineering lead", sources: ["Slack", "GitHub", "Notion"] },
-  bob: { name: "Bob", role: "Frontend contractor", sources: ["Slack"] },
-};
+export { PEOPLE };
 
 export function Avatar({ user, size = 36 }: { user: User; size?: number }) {
   return (

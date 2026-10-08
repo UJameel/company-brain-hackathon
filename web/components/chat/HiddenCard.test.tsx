@@ -14,7 +14,7 @@ describe("HiddenCard", () => {
     session.mode = "recorded";
     const onGranted = vi.fn();
     render(<HiddenCard user="bob" onGranted={onGranted} hidden={{ "alice-brain": { owner: "alice", extra: ["channel:leadership"] } }} />);
-    fireEvent.click(screen.getByRole("button", { name: /grant as alice/i }));
+    fireEvent.click(screen.getByRole("button", { name: /grant as david/i }));
     expect(session.grantLocal).toHaveBeenCalledWith("alice", "bob");
     expect(onGranted).toHaveBeenCalled();
     session.mode = "live";
@@ -27,6 +27,6 @@ describe("HiddenCard", () => {
     expect(screen.getByText("2 datasets you can't see")).toBeTruthy();
     expect(screen.getByText(/channel:leadership, source:github/)).toBeTruthy();
     expect(screen.getByText(/source:notion/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /grant as alice/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /grant as david/i })).toBeTruthy();
   });
 });

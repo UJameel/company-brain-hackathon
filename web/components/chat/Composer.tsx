@@ -1,4 +1,5 @@
 "use client";
+import { displayText } from "@/lib/names";
 import { useState } from "react";
 
 export const SCENARIOS = [
@@ -14,7 +15,7 @@ export function Composer({ busy, onSend }: { busy: boolean; onSend: (q: string) 
   return (
     <div className="border-t border-line bg-bg-2 p-4">
       <div className="mb-2 flex flex-wrap gap-2">
-        {SCENARIOS.map((s) => <button key={s.label} onClick={() => setQ(s.q)} className="border border-line-2 px-2.5 py-1 text-[12px] text-fg-2 hover:border-accent hover:text-accent">{s.label}</button>)}
+        {SCENARIOS.map((s) => <button key={s.label} onClick={() => setQ(displayText(s.q))} className="border border-line-2 px-2.5 py-1 text-[12px] text-fg-2 hover:border-accent hover:text-accent">{s.label}</button>)}
       </div>
       <div className="flex gap-2">
         <label htmlFor="composer" className="sr-only">Ask the brain</label>

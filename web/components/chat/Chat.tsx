@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { applyEvent, newTurn, type Turn } from "@/lib/chat";
 import { findRecorded, replay } from "@/lib/recorded";
 import { useSession, useUser } from "@/lib/session";
+import { toBackend } from "@/lib/names";
 import { loadThread, saveThread } from "@/lib/threadStore";
 import type { ChatEvent, User } from "@/lib/types";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,7 +39,8 @@ export function Chat() {
     } catch (e) { onEvent({ name: "error", data: { detail: (e as Error).message } }); }
   }, [s]);
 
-  const send = async (q: string) => {
+  const send = async (typed: string) => {
+    const q = toBackend(typed);  // the person says David and Goliath; the brain knows alice and bob
     setBusy(true);
     try {
       if (s.compare) { const other: User = me === "alice" ? "bob" : "alice"; await Promise.all([runOne(me, q, true), runOne(other, q, false)]); }

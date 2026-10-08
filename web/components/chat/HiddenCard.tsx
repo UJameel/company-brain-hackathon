@@ -1,5 +1,6 @@
 "use client";
 import { api } from "@/lib/api";
+import { displayDataset, PEOPLE } from "@/lib/names";
 import { useSession } from "@/lib/session";
 import type { HiddenMeta, User } from "@/lib/types";
 import { useState } from "react";
@@ -27,11 +28,11 @@ export function HiddenCard({ hidden, user, onGranted }: { hidden: Record<string,
           <b className="font-medium text-fg">{names.length} dataset{names.length > 1 ? "s" : ""} you can&apos;t see</b>
           {names.map((n) => {
             const m = hidden[n]; const what = (m.extra?.length ? m.extra : m.sources) ?? [];
-            return <div key={n} className="font-mono text-[11px]">{n} · owner {m.owner}{what.length ? ` · ${what.join(", ")}` : ""}</div>;
+            return <div key={n} className="font-mono text-[11px]">{displayDataset(n)} · owner {PEOPLE[m.owner as User]?.name ?? m.owner}{what.length ? ` · ${what.join(", ")}` : ""}</div>;
           })}
         </div>
         {user !== owner && (
-          <button onClick={grant} disabled={busy} className="btn btn-sm btn-primary">{busy ? "Granting" : `Grant as ${owner}`}</button>
+          <button onClick={grant} disabled={busy} className="btn btn-sm btn-primary">{busy ? "Granting" : `Grant as ${PEOPLE[owner].name}`}</button>
         )}
       </div>
       {error && <p className="mt-2 font-mono text-[11px] text-muted">Grant failed: {error}</p>}

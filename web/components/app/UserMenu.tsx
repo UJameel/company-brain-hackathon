@@ -43,7 +43,7 @@ export function UserMenu() {
           <div className="px-2 py-1.5 font-mono text-[11px] text-muted">{p.role}</div>
           <Link href="/app/actions" role="menuitem" onClick={() => setOpen(false)} className="block px-2 py-1.5 hover:bg-bg-3">Actions history</Link>
           <Link href="/app/quality" role="menuitem" onClick={() => setOpen(false)} className="block px-2 py-1.5 hover:bg-bg-3">Quality</Link>
-          {s.granted("bob") && <button role="menuitem" onClick={revoke} className="block w-full px-2 py-1.5 text-left hover:bg-bg-3">Revoke Alice&apos;s share with Bob</button>}
+          {s.granted("bob") && <button role="menuitem" onClick={revoke} className="block w-full px-2 py-1.5 text-left hover:bg-bg-3">Revoke {PEOPLE.alice.name}&apos;s share with {PEOPLE.bob.name}</button>}
           {s.mode === "live" && <button role="menuitem" onClick={reset} disabled={restarting} className="block w-full px-2 py-1.5 text-left hover:bg-bg-3">{restarting ? "Restarting the brain" : "Reset the demo"}</button>}
           <label className="flex items-center gap-2 px-2 py-1.5 font-mono text-[11px] text-muted"><input id="compare" type="checkbox" checked={s.compare} onChange={(e) => s.setCompare(e.target.checked)} />Developer: compare both users</label>
           <div className="my-1 border-t border-line" />

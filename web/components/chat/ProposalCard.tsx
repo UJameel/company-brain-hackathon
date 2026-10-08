@@ -1,6 +1,7 @@
 "use client";
 import { resultUrl } from "@/lib/actions";
 import { api } from "@/lib/api";
+import { displayText } from "@/lib/names";
 import { useSession } from "@/lib/session";
 import type { Proposal } from "@/lib/types";
 import { useState } from "react";
@@ -36,11 +37,11 @@ export function ProposalCard({ proposal, onChange }: { proposal: Proposal; onCha
         <span className="font-serif text-base font-semibold">{TOOL_LABEL[proposal.tool] ?? proposal.tool}</span>
         <span className="font-mono text-[11px] text-muted">{STATUS[proposal.status] ?? proposal.status}{proposal.as_user ? ` · as ${proposal.as_user}` : ""}</span>
       </div>
-      <p className="mt-1 text-fg-2">{proposal.rationale}</p>
-      {body && <p className="mt-2 text-fg">“{body}”</p>}
-      {typeof input.title === "string" && <p className="mt-1 font-mono text-[11px] text-muted">title {input.title}</p>}
-      {typeof input.channel === "string" && <p className="font-mono text-[11px] text-muted">to {input.channel}</p>}
-      {proposal.tool === "request_access" && typeof input.owner === "string" && <p className="font-mono text-[11px] text-muted">owner {input.owner} · dataset {String(input.dataset ?? "")}</p>}
+      <p className="mt-1 text-fg-2">{displayText(proposal.rationale)}</p>
+      {body && <p className="mt-2 text-fg">“{displayText(body)}”</p>}
+      {typeof input.title === "string" && <p className="mt-1 font-mono text-[11px] text-muted">title {displayText(input.title)}</p>}
+      {typeof input.channel === "string" && <p className="font-mono text-[11px] text-muted">to {displayText(input.channel)}</p>}
+      {proposal.tool === "request_access" && typeof input.owner === "string" && <p className="font-mono text-[11px] text-muted">owner {displayText(input.owner)} · dataset {displayText(String(input.dataset ?? ""))}</p>}
       {error && <p className="mt-2 font-mono text-[11px] text-muted">Could not record the decision: {error}</p>}
       {!settled && (
         <div className="mt-2.5 flex flex-wrap items-center gap-2">

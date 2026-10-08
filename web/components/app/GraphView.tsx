@@ -1,6 +1,7 @@
 "use client";
 import { api } from "@/lib/api";
 import { layoutGraph, sourceTone, type LaidOut } from "@/lib/brain/layout";
+import { displayDataset } from "@/lib/names";
 import { recordedGraphFor } from "@/lib/recordedExtras";
 import { useSession, useUser } from "@/lib/session";
 import { sourceName } from "@/lib/steps";
@@ -25,7 +26,7 @@ export function GraphView() {
     <div className="grid h-full lg:grid-cols-[260px_1fr]">
       <aside className="border-r border-line p-5 font-mono text-[12px]">
         <div className="insc mb-3 text-[11px]">Datasets you can read</div>
-        {datasets.map(([d, n]) => <div key={d} className="flex justify-between py-1 text-fg-2"><span>{d}</span><span className="num">{n}</span></div>)}
+        {datasets.map(([d, n]) => <div key={d} className="flex justify-between py-1 text-fg-2"><span>{displayDataset(d)}</span><span className="num">{n}</span></div>)}
         <div className="insc mb-3 mt-6 text-[11px]">Sources</div>
         {sources.map((t) => <div key={t} className="py-1 text-fg-2">{sourceName(t)}</div>)}
         {err && <p className="mt-6 text-muted">Could not load the graph: {err}</p>}

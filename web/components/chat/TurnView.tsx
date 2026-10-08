@@ -2,6 +2,7 @@
 import { proposalFromRequest } from "@/lib/actions";
 import type { Turn } from "@/lib/chat";
 import { highlight, stripBold } from "@/lib/highlight";
+import { displayText } from "@/lib/names";
 import { sourceName } from "@/lib/steps";
 import type { Proposal } from "@/lib/types";
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import { UsageFooter } from "./UsageFooter";
 
 export function TurnView({ turn, onGranted }: { turn: Turn; onGranted: () => void }) {
   const terms = turn.steps.themis?.hits ?? [];
-  const parts = highlight(stripBold(turn.answer), terms);
+  const parts = highlight(displayText(stripBold(turn.answer)), terms);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   useEffect(() => { setProposals(turn.steps.proposals ?? []); }, [turn.steps.proposals]);
   const replaceProposal = (id: string) => (next: Proposal | null) => setProposals((ps) => ps.flatMap((p) => (p.id === id ? (next ? [next] : []) : [p])));
@@ -26,7 +27,7 @@ export function TurnView({ turn, onGranted }: { turn: Turn; onGranted: () => voi
     <article className="border border-line bg-bg-2 p-4">
       <header className="mb-3 flex items-baseline justify-between gap-2">
         <span className="font-serif text-xl font-semibold tracking-[0.04em]">{PEOPLE[turn.user].name}</span>
-        <span className="truncate font-mono text-[11px] text-muted">{turn.question}</span>
+        <span className="truncate font-mono text-[11px] text-muted">{displayText(turn.question)}</span>
       </header>
       <StepRail turn={turn} />
       <div className="border border-line bg-bg px-3.5 py-3 text-[13.5px] leading-relaxed">

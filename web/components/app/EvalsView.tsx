@@ -3,7 +3,8 @@ import recorded from "@/data/evals.json";
 import { api } from "@/lib/api";
 import { pairRows } from "@/lib/evals";
 import { useSession } from "@/lib/session";
-import type { Evals } from "@/lib/types";
+import { PEOPLE } from "@/lib/names";
+import type { Evals, User } from "@/lib/types";
 import { useEffect, useState } from "react";
 
 function Num({ v, label, lit }: { v: number | null | undefined; label: string; lit?: boolean }) {
@@ -34,7 +35,7 @@ export function EvalsView() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-t border-line">
-                <td className="py-2 pr-3">{r.id}</td><td>{r.as_user}</td>
+                <td className="py-2 pr-3">{r.id}</td><td>{PEOPLE[r.as_user as User]?.name ?? r.as_user}</td>
                 <td className="num text-right">{r.before?.toFixed(2) ?? ""}</td>
                 <td className={`num text-right ${r.after != null && r.before != null && r.after > r.before ? "text-accent" : ""}`}>{r.after?.toFixed(2) ?? ""}</td>
                 <td className="pl-3 text-muted">{r.leaks.length ? `leaked ${r.leaks.join(", ")}` : r.missing.length ? `missing ${r.missing.join(", ")}` : ""}</td>

@@ -31,7 +31,7 @@ test("the grant beat works in recorded mode", async ({ page }) => {
   await page.getByRole("button", { name: "What will Pro cost after launch?" }).click();
   await page.getByRole("button", { name: "Ask" }).click();
   await expect(page.getByText(/dataset.* you can't see/)).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: /grant as alice/i }).click();
+  await page.getByRole("button", { name: /grant as david/i }).click();
   await expect(page.locator("article")).toHaveCount(2, { timeout: 15_000 });
   await expect(page.locator("article").nth(1).getByText(/\$59/)).toBeVisible({ timeout: 15_000 });
 });
