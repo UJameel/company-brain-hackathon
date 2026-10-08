@@ -18,15 +18,35 @@ export function sourceTone(tag: string, order: string[]): number {
 
 export type LaidOut = Graph & { nodes: (GraphNode & { x: number; y: number; z: number })[] };
 
-export function layoutGraph(graph: Graph): Promise<LaidOut> {
+function attach(graph: Graph, positions: Vec3[]): LaidOut {
+  const fitted = fitToVolume(positions);
+  return { ...graph, nodes: graph.nodes.map((n, i) => ({ ...n, x: fitted[i]?.[0] ?? 0, y: fitted[i]?.[1] ?? 0, z: fitted[i]?.[2] ?? 0 })) };
+}
+
+/** Force layout on the main thread; a few hundred nodes take well under a second. */
+async function layoutInline(graph: Graph): Promise<Vec3[]> {
+  const { forceCenter, forceLink, forceManyBody, forceSimulation } = await import("d3-force-3d");
+  const nodes: import("d3-force-3d").SimulationNode[] = graph.nodes.map((n) => ({ id: n.id }));
+  const links = graph.edges.map((l) => ({ source: l.source, target: l.target }));
+  const sim = forceSimulation(nodes, 3).force("charge", forceManyBody().strength(-8)).force("link", forceLink(links).id((d) => d.id).distance(12)).force("center", forceCenter()).stop();
+  for (let i = 0; i < 300; i++) sim.tick();
+  return nodes.map((n) => [n.x ?? 0, n.y ?? 0, n.z ?? 0]);
+}
+
+function layoutInWorker(graph: Graph): Promise<Vec3[]> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./layout.worker.ts", import.meta.url));
-    worker.onmessage = (e: MessageEvent<Vec3[]>) => {
-      const fitted = fitToVolume(e.data);
-      resolve({ ...graph, nodes: graph.nodes.map((n, i) => ({ ...n, x: fitted[i][0], y: fitted[i][1], z: fitted[i][2] })) });
-      worker.terminate();
-    };
-    worker.onerror = (e) => { reject(e); worker.terminate(); };
+    let worker: Worker;
+    try { worker = new Worker(new URL("./layout.worker.ts", import.meta.url)); } catch (e) { reject(e); return; }
+    const timer = setTimeout(() => { worker.terminate(); reject(new Error("layout worker timed out")); }, 15_000);
+    worker.onmessage = (e: MessageEvent<Vec3[]>) => { clearTimeout(timer); resolve(e.data); worker.terminate(); };
+    worker.onerror = (e) => { clearTimeout(timer); reject(e); worker.terminate(); };
     worker.postMessage(graph);
   });
+}
+
+/** Lay the real graph out inside the brain volume. Tries a Web Worker, falls back to the main thread. */
+export async function layoutGraph(graph: Graph): Promise<LaidOut> {
+  if (!graph.nodes.length) return attach(graph, []);
+  try { return attach(graph, await layoutInWorker(graph)); }
+  catch { return attach(graph, await layoutInline(graph)); }
 }
