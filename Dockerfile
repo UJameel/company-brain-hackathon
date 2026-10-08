@@ -4,7 +4,8 @@
 # /app/state on first boot and on /reset.
 FROM ghcr.io/ladybugdb/extension-repo@sha256:180c83fb190e9d6ef8d324850b192db26794ab7cb866a38813a45365f14bd46d AS ladybug-extensions
 # Same reshuffle cognee's Dockerfile does: v*/linux_*/json/libjson.lbug_extension -> /bundle/v*/linux_*/libjson.lbug_extension
-RUN set -e; for f in v*/linux_*/json/libjson.lbug_extension; do \
+RUN mkdir -p /bundle && cd /usr/share/nginx/html && \
+    for f in v*/linux_*/json/libjson.lbug_extension; do \
       d="/bundle/${f%/json/libjson.lbug_extension}"; mkdir -p "$d" && cp "$f" "$d/libjson.lbug_extension"; \
     done
 
