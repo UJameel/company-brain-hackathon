@@ -14,7 +14,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from pantheon import cerberus, config, hephaestus, hermes, mnemosyne
+from .state import restore_from_env
+
+restore_from_env()  # before pantheon.config runs and creates an empty state tree
+
+from pantheon import cerberus, config, hephaestus, hermes, mnemosyne  # noqa: E402
 
 from . import connections as conns
 from . import graph as graphmod
@@ -184,9 +188,3 @@ async def reset() -> dict:
     shutil.copytree(PRISTINE, LIVE)
     asyncio.get_running_loop().call_later(0.3, os._exit, 0)  # Fly restarts the machine
     return {"ok": True, "restarting": True}
-
-
-@app.on_event("startup")
-def restore_state_if_empty() -> None:
-    if PRISTINE.is_dir() and str(LIVE) and not any(LIVE.glob("*")):
-        shutil.copytree(PRISTINE, LIVE, dirs_exist_ok=True)
